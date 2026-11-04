@@ -1,0 +1,151 @@
+slug: delhi
+name: Delhi
+state: NCT of Delhi
+country: India
+crs_geographic: EPSG:4326
+crs_projected: EPSG:32643
+projected_srid: 32643
+centroid:
+  lat: 28.6139
+  lon: 77.2090
+bbox:
+  min_lon: 76.84
+  min_lat: 28.40
+  max_lon: 77.35
+  max_lat: 28.88
+boundary_geojson: data/sample/boundaries/delhi.geojson
+analysis:
+  date_start: "2000-01-01"
+  date_end: "2026-12-31"
+  baseline_year: 2020
+  recent_year: 2024
+  grid_resolution_m: 1000
+  buffer_distances_m: [100, 300, 500, 1000]
+  pollutants: [PM2.5, PM10, NO2, SO2, CO, O3]
+  hotspot_min_stations: 8
+land_cover_classes:
+  - built_up
+  - tree_cover
+  - grassland_sparse_vegetation
+  - cropland
+  - bare_soil
+  - water
+  - other
+satellite:
+  collection: sentinel-2-l2a
+  cloud_cover_max: 20
+  baseline_year: 2020
+  recent_year: 2024
+  indices: [NDVI, NDBI, NDWI]
+land_cover:
+  product: esa_worldcover
+  years: [2020, 2021]
+  note: >
+    WorldCover 2020 (v100) and 2021 (v200) use different algorithms.
+    Apparent change includes classification differences as well as possible real change.
+stations:
+  - external_station_id: site_5024
+    name: Alipur, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.8153
+    lon: 77.1530
+    station_type: continuous
+    factor: 0.95
+  - external_station_id: site_301
+    name: Anand Vihar, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.6476
+    lon: 77.3158
+    station_type: continuous
+    factor: 1.22
+  - external_station_id: site_1420
+    name: Ashok Vihar, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.6954
+    lon: 77.1817
+    station_type: continuous
+    factor: 1.05
+  - external_station_id: site_108
+    name: Aya Nagar, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: IMD
+    lat: 28.4707
+    lon: 77.1099
+    station_type: continuous
+    factor: 0.82
+  - external_station_id: site_1560
+    name: Bawana, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.7762
+    lon: 77.0511
+    station_type: continuous
+    factor: 1.12
+  - external_station_id: site_1561
+    name: Punjabi Bagh, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.6740
+    lon: 77.1310
+    station_type: continuous
+    factor: 1.08
+  - external_station_id: site_113
+    name: R K Puram, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.5633
+    lon: 77.1869
+    station_type: continuous
+    factor: 0.98
+  - external_station_id: site_103
+    name: DTU, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: CPCB
+    lat: 28.7500
+    lon: 77.1177
+    station_type: continuous
+    factor: 0.92
+  - external_station_id: site_114
+    name: IGI Airport (T3), Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: IMD
+    lat: 28.5628
+    lon: 77.1182
+    station_type: continuous
+    factor: 1.06
+  - external_station_id: site_1431
+    name: Okhla Phase-2, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.5313
+    lon: 77.2711
+    station_type: continuous
+    factor: 1.18
+  - external_station_id: site_1421
+    name: Dwarka-Sector 8, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.5710
+    lon: 77.0719
+    station_type: continuous
+    factor: 0.94
+  - external_station_id: site_104
+    name: Mandir Marg, Delhi
+    source: SAMPLE_CPCB_STYLE
+    agency: DPCC
+    lat: 28.6345
+    lon: 77.2005
+    station_type: continuous
+    factor: 1.02
+station_note: >
+  Coordinates follow the CPCB CAAQMS directory. Monthly concentrations in the seed
+  are labeled SAMPLE and are not official CPCB measurements. Continuous PM2.5
+  CAAQMS does not cover 2000–2010; import CCR CSV for official years.
+attribution:
+  osm: © OpenStreetMap contributors (ODbL)
+  copernicus: Contains modified Copernicus Sentinel data
+  worldcover: © ESA WorldCover project / CC-BY 4.0
+  cpcb: Central Pollution Control Board, Government of India

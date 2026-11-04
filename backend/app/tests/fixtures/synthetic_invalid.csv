@@ -1,0 +1,4 @@
+station_id,pollutant,concentration,unit,observed_at,latitude,longitude,source
+site_x,PM2.5,-5,ug/m3,2024-01-01T00:00:00,30.27,78.04,SYNTHETIC
+site_x,PM2.5,999,ug/m3,2024-01-02T00:00:00,30.27,78.04,SYNTHETIC
+site_x,PM2.5,40,ug/m3,2024-01-03T00:00:00,30.27,78.04,SYNTHETIC

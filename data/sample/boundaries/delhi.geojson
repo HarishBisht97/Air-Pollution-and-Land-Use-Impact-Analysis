@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Delhi NCT approximate envelope",
+        "source": "SAMPLE",
+        "note": "Not an official Survey of India or GNCTD cadastral boundary. Replace via spatial-file ingestion."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [76.840, 28.480],
+          [76.920, 28.420],
+          [77.120, 28.400],
+          [77.280, 28.430],
+          [77.350, 28.540],
+          [77.348, 28.700],
+          [77.300, 28.850],
+          [77.180, 28.880],
+          [77.020, 28.860],
+          [76.860, 28.760],
+          [76.840, 28.600],
+          [76.840, 28.480]
+        ]]
+      }
+    }
+  ]
+}
