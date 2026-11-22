@@ -1,25 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, GeoJSON, ImageOverlay, LayerGroup, LayersControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, LayersControl, useMap } from "react-leaflet";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
-import { apiGet, downloadUrl } from "@/lib/api";
+import { apiGet } from "@/lib/api";
 import { useFilters } from "@/hooks/useFilters";
 import { Alert, Card } from "@/components/ui/Card";
 import { DataKindBadge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
-import { useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
+import { AQI_COLORS, useAnnualAqiSurface, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
+import { StationChangeTable } from "@/features/map/StationChangeTable";
+import {
+  AnnualStationsLayer,
+  AqiFillLayer,
+  AqiLinesLayer,
+  AqiPanes,
+  BUILT_BASELINE,
+  BUILT_NEW,
+  BuiltUpOverlay,
+  ClassList,
+  type SurfaceMode,
+  signed,
+  useYearStations,
+} from "@/features/map/annualAqiLayers";
 
-const AQI_COLORS: Record<string, string> = {
-  Good: "#3f6b4a",
-  Satisfactory: "#65a30d",
-  Moderate: "#ca8a04",
-  Poor: "#ea580c",
-  "Very Poor": "#b91c1c",
-  Severe: "#7f1d1d",
-};
 const AQI_MISSING = "#78716c";
-const BUILT_BASELINE = "rgba(120, 113, 108, 0.6)";
-const BUILT_NEW = "rgba(220, 38, 38, 0.82)";
 
 const GRID_BINS: { label: string; color: string; above: number }[] = [
   { label: "Above 100 µg/m³", color: "#7c2d12", above: 100 },
@@ -67,21 +71,22 @@ export function MapPage() {
   const cpcb = useQuery({ queryKey: ["cpcb-snapshot", filters.city], queryFn: () => apiGet<any>("/air-quality/cpcb-snapshot", { city: filters.city }) });
   const builtUp = useBuiltUpAqiYears(filters.city);
   const years = builtUp.data?.years ?? [];
+  const [mode, setMode] = useState<SurfaceMode>("change");
   const [year, setYear] = useState<number | null>(null);
-  const selectedYear = year ?? years[years.length - 1]?.year ?? null;
+  const [baseChoice, setBaseChoice] = useState<number | null>(null);
+  const firstYear = years[0]?.year ?? null;
+  const lastYear = years[years.length - 1]?.year ?? null;
+  const base = baseChoice ?? firstYear;
+  const minYear = mode === "change" && base != null ? base + 1 : firstYear;
+  const selectedYear = year == null ? lastYear : minYear != null ? Math.max(year, minYear) : year;
   const yearStats = years.find((item) => item.year === selectedYear);
   const yearCity = builtUp.data?.city_trend.find((item) => item.year === selectedYear);
-  const baselineCity = builtUp.data?.city_trend[0];
-  const yearStations = useMemo(() => {
-    if (!builtUp.data || selectedYear == null) return null;
-    const key = String(selectedYear);
-    return {
-      type: "FeatureCollection" as const,
-      features: builtUp.data.features
-        .filter((feature) => feature.properties.years[key])
-        .map((feature) => ({ ...feature, properties: { name: feature.properties.name, ...feature.properties.years[key] } })),
-    };
-  }, [builtUp.data, selectedYear]);
+  const baseCity = builtUp.data?.city_trend.find((item) => item.year === base);
+  const previousCity = builtUp.data?.city_trend.find((item) => selectedYear != null && item.year === selectedYear - 1);
+  const surface = useAnnualAqiSurface(filters.city, selectedYear, base, mode);
+  const classSet = mode === "change" ? builtUp.data?.change_classes : builtUp.data?.aqi_classes;
+  const classes = classSet?.classes ?? [];
+  const yearStations = useYearStations(builtUp.data, selectedYear, base, mode);
 
   const cityBounds = useMemo(() => {
     const geometry = city.data?.boundary?.geometry;
@@ -112,33 +117,24 @@ export function MapPage() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            <AqiPanes />
             <LayersControl position="topright">
               <LayersControl.Overlay checked name="City boundary">
                 {city.data?.boundary ? <GeoJSON data={city.data.boundary} style={{ color: "#1c1917", weight: 2, fillOpacity: 0.04 }} /> : null}
               </LayersControl.Overlay>
-              <LayersControl.Overlay checked name="Built-up and annual AQI">
-                <LayerGroup>
-                  {builtUp.data && selectedYear != null ? (
-                    <ImageOverlay
-                      url={downloadUrl(`/analysis/builtup-overlay/${selectedYear}`, { city: filters.city })}
-                      bounds={builtUp.data.overlay_bounds}
-                      opacity={0.85}
-                    />
-                  ) : null}
-                  {yearStations ? (
-                    <GeoJSON
-                      key={`annual-aqi-${selectedYear}`}
-                      data={yearStations as any}
-                      pointToLayer={(feature, latlng) => aqiMarker(latlng, feature.properties?.category)}
-                      onEachFeature={(feature, layer) => {
-                        const p = feature.properties;
-                        layer.bindPopup(
-                          `<strong>${p.name}</strong><br/>Annual AQI ${selectedYear}: ${p.aqi} · ${p.category}<br/>Built-up within 1 km: ${p.built ?? "—"}%<br/>${p.days} valid days, ${p.poor_or_worse_days} at Poor or worse<br/>${builtUp.data?.aqi_method ?? ""}`,
-                        );
-                      }}
-                    />
-                  ) : null}
-                </LayerGroup>
+              <LayersControl.Overlay checked name="Interpolated AQI surface">
+                {surface.data ? <AqiFillLayer surface={surface.data} opacity={opacity} /> : null}
+              </LayersControl.Overlay>
+              <LayersControl.Overlay checked name="AQI contour lines">
+                {surface.data ? <AqiLinesLayer surface={surface.data} /> : null}
+              </LayersControl.Overlay>
+              <LayersControl.Overlay checked name="Annual AQI stations">
+                {yearStations && selectedYear != null ? (
+                  <AnnualStationsLayer stations={yearStations} classes={classes} year={selectedYear} base={base} mode={mode} method={builtUp.data?.aqi_method ?? ""} />
+                ) : null}
+              </LayersControl.Overlay>
+              <LayersControl.Overlay name="Built-up growth (Dynamic World)">
+                {builtUp.data && selectedYear != null ? <BuiltUpOverlay city={filters.city} year={selectedYear} bounds={builtUp.data.overlay_bounds} /> : null}
               </LayersControl.Overlay>
               <LayersControl.Overlay name="CPCB stations">
                 {cpcb.data?.features?.length ? (
@@ -191,7 +187,7 @@ export function MapPage() {
                   />
                 ) : null}
               </LayersControl.Overlay>
-              <LayersControl.Overlay checked name="Major roads">
+              <LayersControl.Overlay name="Major roads">
                 {roads.data ? <GeoJSON data={roads.data} style={{ color: "#44403c", weight: 2 }} /> : null}
               </LayersControl.Overlay>
               <LayersControl.Overlay name="Green spaces">
@@ -207,11 +203,39 @@ export function MapPage() {
         <Card title="Legend and layers">
           {builtUp.data && selectedYear != null ? (
             <div className="mb-4 border-b border-stone-200 pb-3">
-              <p className="text-xs font-medium text-stone-700">Built-up and annual AQI, {selectedYear}</p>
+              <div className="mb-2 flex overflow-hidden rounded-md border border-stone-300 text-xs">
+                {(["change", "level"] as SurfaceMode[]).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`flex-1 px-2 py-1 ${mode === item ? "bg-ink text-white" : "bg-white text-stone-700"}`}
+                    onClick={() => setMode(item)}
+                  >
+                    {item === "change" ? "Change in AQI" : "AQI level"}
+                  </button>
+                ))}
+              </div>
+              {mode === "change" ? (
+                <label className="mb-1 flex items-center justify-between text-xs text-stone-700">
+                  Compared with
+                  <select
+                    className="rounded border border-stone-300 px-1 py-0.5"
+                    value={base ?? ""}
+                    onChange={(e) => setBaseChoice(Number(e.target.value))}
+                  >
+                    {years.slice(0, -1).map((item) => (
+                      <option key={item.year} value={item.year}>{item.year}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <p className="text-xs font-medium text-stone-700">
+                {mode === "change" ? `Change in annual AQI, ${base} to ${selectedYear}` : `Annual AQI, ${selectedYear}`}
+              </p>
               <input
                 className="w-full"
                 type="range"
-                min={years[0].year}
+                min={minYear ?? years[0].year}
                 max={years[years.length - 1].year}
                 step={1}
                 value={selectedYear}
@@ -219,20 +243,40 @@ export function MapPage() {
                 aria-label="Year"
               />
               <div className="flex justify-between text-[10px] text-stone-500">
-                <span>{years[0].year}</span>
+                <span>{minYear ?? years[0].year}</span>
                 <span>{years[years.length - 1].year}</span>
               </div>
-              <ul className="mt-2 space-y-1 text-sm">
-                <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: BUILT_BASELINE }} /> Built-up in {builtUp.data.baseline_year}</li>
-                <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: BUILT_NEW }} /> Built-up since {builtUp.data.baseline_year}</li>
-              </ul>
+              <ClassList classes={classes} />
+              <p className="mt-1 text-[11px] text-stone-600">
+                {mode === "change"
+                  ? "Pale red areas improved most (AQI fell), dark red areas got worse (AQI rose). Classes are 10 AQI points and the same for every pair of years. The solid line is no change; dashed lines are every 20 points."
+                  : "Pale red is the lowest annual AQI and dark red the highest, in 10-point classes that are the same in every year. Solid lines mark the CPCB limits at 200 (Moderate/Poor) and 300 (Poor/Very Poor)."}
+              </p>
               <dl className="mt-2 space-y-1 text-xs text-stone-700">
+                {mode === "change" && surface.data?.mode === "change" ? (
+                  <div className="flex justify-between">
+                    <dt>Monitors improved / worsened</dt>
+                    <dd>
+                      {surface.data.improved} / {surface.data.worsened} (median {signed(surface.data.median_change ?? 0)})
+                    </dd>
+                  </div>
+                ) : null}
+                <div className="flex justify-between">
+                  <dt>Change in mean AQI</dt>
+                  <dd>
+                    {mode === "change" && baseCity?.mean_aqi != null && yearCity?.mean_aqi != null
+                      ? `${signed(yearCity.mean_aqi - baseCity.mean_aqi)} vs ${baseCity.year}`
+                      : previousCity?.mean_aqi != null && yearCity?.mean_aqi != null
+                        ? `${signed(yearCity.mean_aqi - previousCity.mean_aqi)} vs ${previousCity.year}`
+                        : "—"}
+                  </dd>
+                </div>
                 <div className="flex justify-between">
                   <dt>Built-up inside Delhi</dt>
                   <dd>
                     {formatNumber(yearCity?.built_km2, 0)} km²
-                    {baselineCity?.built_km2 != null && yearCity?.built_km2 != null && selectedYear !== baselineCity.year
-                      ? ` (${yearCity.built_km2 >= baselineCity.built_km2 ? "+" : ""}${formatNumber(yearCity.built_km2 - baselineCity.built_km2, 0)} since ${baselineCity.year})`
+                    {baseCity?.built_km2 != null && yearCity?.built_km2 != null && selectedYear !== baseCity.year
+                      ? ` (${signed(yearCity.built_km2 - baseCity.built_km2)} since ${baseCity.year})`
                       : ""}
                   </dd>
                 </div>
@@ -243,17 +287,25 @@ export function MapPage() {
               </dl>
               {yearStats?.gap != null ? (
                 <p className="mt-2 text-xs text-stone-600">
-                  In {selectedYear}, monitors in the most built-up third (about {formatNumber(yearStats.most_built_share, 0)}% built-up within 1 km) averaged {formatNumber(yearStats.gap, 0)} AQI points more than monitors in the least built-up third (about {formatNumber(yearStats.least_built_share, 0)}%). Station circles use the CPCB category of the annual mean AQI. This is an association, not a measured effect.
+                  In {selectedYear}, monitors in the most built-up third (about {formatNumber(yearStats.most_built_share, 0)}% built-up within 1 km) averaged {formatNumber(yearStats.gap, 0)} AQI points more than monitors in the least built-up third (about {formatNumber(yearStats.least_built_share, 0)}%). This is an association, not a measured effect.
                 </p>
               ) : null}
+              <p className="mt-2 text-[11px] text-stone-600">
+                {surface.data?.method} {surface.data ? `${surface.data.stations} monitors in ${surface.data.year}.` : ""}
+              </p>
+              <p className="mt-3 text-xs font-medium text-stone-700">Built-up growth layer (off by default)</p>
+              <ul className="mt-1 space-y-1 text-sm">
+                <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: BUILT_BASELINE }} /> Built-up in {builtUp.data.baseline_year}</li>
+                <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: BUILT_NEW }} /> Built-up since {builtUp.data.baseline_year}</li>
+              </ul>
             </div>
           ) : null}
           {builtUp.isError ? <p className="mb-3 text-xs text-stone-600">Built-up and annual AQI are not available for this city.</p> : null}
           <label className="text-xs">
-            Grid opacity
+            Fill opacity (AQI surface and grid)
             <input className="w-full" type="range" min={0.15} max={0.9} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} />
           </label>
-          <p className="mt-3 text-xs font-medium text-stone-700">Station AQI category (annual and snapshot layers)</p>
+          <p className="mt-3 text-xs font-medium text-stone-700">CPCB snapshot station category</p>
           <ul className="mt-1 space-y-1 text-sm">
             {Object.entries(AQI_COLORS).map(([label, color]) => (
               <li key={label}><span className="mr-2 inline-block h-3 w-3 rounded-full" style={{ backgroundColor: color }} /> {label}</li>
@@ -282,6 +334,7 @@ export function MapPage() {
           <p className="mt-2 text-xs">CPCB index stations: {formatNumber(cpcb.data?.station_count, 0)}. Concentration stations: {formatNumber(stations.data?.features?.length, 0)}.</p>
         </Card>
       </div>
+      {builtUp.data ? <StationChangeTable data={builtUp.data} selectedYear={selectedYear} /> : null}
     </div>
   );
 }

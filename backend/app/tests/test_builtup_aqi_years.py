@@ -1,4 +1,4 @@
-from app.analytics.builtup_aqi_years import city_trend_row, year_statistics
+from app.analytics.builtup_aqi_years import change_classes, change_samples, city_trend_row, year_statistics
 
 
 def _rows():
@@ -20,6 +20,20 @@ def test_year_statistics_refuses_small_samples():
     stats = year_statistics(_rows()[:6])
     assert stats["status"] == "insufficient_data"
     assert stats["gap"] is None
+
+
+def test_change_samples_need_both_years():
+    features = [
+        {"geometry": {"coordinates": [77.1, 28.6]}, "properties": {"years": {"2018": {"aqi": 240.0}, "2024": {"aqi": 210.5}}}},
+        {"geometry": {"coordinates": [77.2, 28.7]}, "properties": {"years": {"2024": {"aqi": 230.0}}}},
+    ]
+    assert change_samples(features, 2018, 2024) == [(77.1, 28.6, -29.5)]
+
+
+def test_change_classes_have_a_zero_line():
+    classes = change_classes()
+    assert 0.0 in classes["line_levels"]
+    assert classes["line_levels"] == [-40.0, -20.0, 0.0, 20.0, 40.0]
 
 
 def test_city_trend_row_averages_stations():

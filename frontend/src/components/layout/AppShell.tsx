@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { FilterBar } from "@/components/layout/FilterBar";
 
 const links = [
+  { to: "/presentation", label: "Presentation" },
   { to: "/", label: "Dashboard" },
   { to: "/map", label: "Map explorer" },
   { to: "/air-quality", label: "Air quality" },

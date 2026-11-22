@@ -23,7 +23,7 @@ type Contrast = {
   pollutants: PollutantContrast[];
 };
 
-type Payload = {
+export type LandUsePayload = {
   year: number;
   station_count: number;
   land_cover: string;
@@ -39,11 +39,35 @@ const COLORS: Record<string, string> = {
   vegetation: "#14532d",
 };
 
-export function LandUseScenariosPage() {
-  const query = useQuery({
+export function useLandUseContrasts() {
+  return useQuery({
     queryKey: ["delhi-land-use"],
-    queryFn: () => apiGet<Payload>("/analysis/delhi-land-use", { city: "delhi" }),
+    queryFn: () => apiGet<LandUsePayload>("/analysis/delhi-land-use", { city: "delhi" }),
   });
+}
+
+export function LandUseContrastChart({ data }: { data: LandUsePayload | undefined }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data?.chart ?? []} margin={{ top: 28, right: 12, left: 12, bottom: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="pollutant" label={{ value: "Pollutant", position: "insideBottom", offset: -2 }} />
+        <YAxis
+          width={64}
+          label={{ value: `Difference in ${data?.year ?? ""} mean (%)`, angle: -90, position: "insideLeft", textAnchor: "middle" }}
+        />
+        <Tooltip />
+        <Legend verticalAlign="top" />
+        <Bar dataKey="built" name="Urbanization" fill={COLORS.built} isAnimationActive={false} />
+        <Bar dataKey="crops" name="Agriculture" fill={COLORS.crops} isAnimationActive={false} />
+        <Bar dataKey="vegetation" name="Vegetation" fill={COLORS.vegetation} isAnimationActive={false} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function LandUseScenariosPage() {
+  const query = useLandUseContrasts();
   const data = query.data;
 
   return (
@@ -62,21 +86,7 @@ export function LandUseScenariosPage() {
       ) : null}
       <Card title={`How the 2024 mean changes when that land cover is more common nearby`}>
         <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data?.chart ?? []} margin={{ top: 28, right: 12, left: 12, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="pollutant" label={{ value: "Pollutant", position: "insideBottom", offset: -2 }} />
-              <YAxis
-                width={64}
-                label={{ value: "Difference in 2024 mean (%)", angle: -90, position: "insideLeft", textAnchor: "middle" }}
-              />
-              <Tooltip />
-              <Legend verticalAlign="top" />
-              <Bar dataKey="built" name="Urbanization" fill={COLORS.built} />
-              <Bar dataKey="crops" name="Agriculture" fill={COLORS.crops} />
-              <Bar dataKey="vegetation" name="Vegetation" fill={COLORS.vegetation} />
-            </BarChart>
-          </ResponsiveContainer>
+          <LandUseContrastChart data={data} />
         </div>
         <p className="mt-2 text-xs text-stone-500">
           X axis: pollutant. Y axis: percent difference between the highest third and the lowest third of that land cover within 1 km. A bar below zero means the high-share stations recorded a lower concentration.

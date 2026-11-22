@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 import pandas as pd
 
-from app.analytics.builtup_aqi_years import BASELINE_YEAR, YEARS, delhi_builtup_aqi_years, load_boundary
+from app.analytics.builtup_aqi_years import BASELINE_YEAR, YEARS, change_samples, delhi_builtup_aqi_years, load_boundary, year_samples
 from app.analytics.builtup_concentration_change import delhi_builtup_concentration_change
 from app.analytics.correlation import correlate
 from app.analytics.delhi_land_use import delhi_land_use_contrasts
@@ -19,7 +19,7 @@ from app.api.deps import current_city, db_session
 from app.core.config import get_settings
 from app.core.study_area import load_city_config
 from app.geospatial.buffers import buffer_bands
-from app.geospatial.contours import aqi_contours
+from app.geospatial.contours import aqi_contours, aqi_surface
 from app.geospatial.crs import area_sq_km
 from app.ingestion.cpcb_snapshot import load_cpcb_snapshot
 from app.remote_sensing.dynamic_world import built_up_overlay_png, built_up_shares
@@ -392,6 +392,81 @@ def builtup_overlay(year: int, city: City = Depends(current_city)):
         raise HTTPException(404, f"Built-up overlay covers {YEARS[0]} to {YEARS[-1]}")
     png, _ = _builtup_overlay(year)
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@lru_cache(maxsize=2 * len(YEARS))
+def _annual_aqi_surface(year: int, projected_crs: str) -> dict:
+    result = delhi_builtup_aqi_years()
+    classes = result["aqi_classes"]
+    settings = get_settings()
+    boundary = load_boundary(settings.resolve_path(settings.raw_data_dir))
+    samples = year_samples(result["features"], year)
+    surface = aqi_surface(samples, boundary, projected_crs, classes["classes"], classes["line_levels"])
+    return {
+        **surface,
+        "mode": "level",
+        "year": year,
+        "stations": len(samples),
+        "method": (
+            "Inverse-distance weighting (power 2) of annual station AQI on a 500 m grid, clipped to the "
+            "Delhi boundary. Colours use the same 10-point classes in every year. Values between "
+            "monitors are estimates, not measurements."
+        ),
+    }
+
+
+@lru_cache(maxsize=64)
+def _annual_aqi_change_surface(base: int, year: int, projected_crs: str) -> dict:
+    result = delhi_builtup_aqi_years()
+    classes = result["change_classes"]
+    settings = get_settings()
+    boundary = load_boundary(settings.resolve_path(settings.raw_data_dir))
+    samples = change_samples(result["features"], base, year)
+    surface = aqi_surface(samples, boundary, projected_crs, classes["classes"], classes["line_levels"])
+    changes = sorted(value for _, _, value in samples)
+    return {
+        **surface,
+        "mode": "change",
+        "base": base,
+        "year": year,
+        "stations": len(samples),
+        "improved": sum(1 for value in changes if value < 0),
+        "worsened": sum(1 for value in changes if value > 0),
+        "median_change": changes[len(changes) // 2] if changes else None,
+        "station_changes": [
+            {"longitude": lon, "latitude": lat, "change": value} for lon, lat, value in samples
+        ],
+        "method": (
+            f"Change in annual station AQI from {base} to {year} for monitors with a valid annual mean in both "
+            "years, interpolated by inverse-distance weighting (power 2) on a 500 m grid and clipped to the "
+            "Delhi boundary. Paler red is a larger fall in AQI, darker red a rise; classes are 10 AQI points and the same for "
+            "every pair of years. Values between monitors are estimates, not measurements."
+        ),
+    }
+
+
+@router.get("/annual-aqi-surface/{year}")
+def annual_aqi_surface(year: int, city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The annual AQI surface is computed for Delhi")
+    if year not in YEARS:
+        raise HTTPException(404, f"Annual AQI covers {YEARS[0]} to {YEARS[-1]}")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data" or not result.get("aqi_classes"):
+        raise HTTPException(404, "Delhi daily station files are missing")
+    return _annual_aqi_surface(year, f"EPSG:{city.projected_srid}")
+
+
+@router.get("/annual-aqi-change-surface/{year}")
+def annual_aqi_change_surface(year: int, base: int = BASELINE_YEAR, city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The annual AQI change surface is computed for Delhi")
+    if year not in YEARS or base not in YEARS or base >= year:
+        raise HTTPException(400, f"Pick a base year before the comparison year, both within {YEARS[0]} to {YEARS[-1]}")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi daily station files are missing")
+    return _annual_aqi_change_surface(base, year, f"EPSG:{city.projected_srid}")
 
 
 @router.get("/delhi-land-use")

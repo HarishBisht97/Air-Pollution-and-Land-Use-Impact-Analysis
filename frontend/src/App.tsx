@@ -10,6 +10,7 @@ import { PriorityPage } from "@/features/priority/PriorityPage";
 import { ReportsPage } from "@/features/reports/ReportsPage";
 import { DatasetsPage } from "@/features/datasets/DatasetsPage";
 import { MethodologyPage } from "@/features/methodology/MethodologyPage";
+import { PresentationPage } from "@/features/presentation/PresentationPage";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="datasets" element={<DatasetsPage />} />
         <Route path="methodology" element={<MethodologyPage />} />
+        <Route path="presentation" element={<PresentationPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

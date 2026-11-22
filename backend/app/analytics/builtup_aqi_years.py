@@ -21,6 +21,7 @@ from app.analytics.daily_aqi import LABEL, MIN_DAYS, annual_station_aqi
 from app.analytics.delhi_land_use import tercile_contrast
 from app.analytics.regression import fit_ols
 from app.core.config import get_settings
+from app.geospatial.contours import change_breaks, change_colours, class_colours, fixed_breaks
 from app.ingestion.xkdr_daily import SLUGS
 from app.ingestion.xkdr_monthly import SOURCE, STATIONS_FILE, load_stations
 from app.remote_sensing.dynamic_world import built_up_area_km2, built_up_shares
@@ -28,6 +29,9 @@ from app.remote_sensing.dynamic_world import built_up_area_km2, built_up_shares
 YEARS = tuple(range(2018, 2025))
 BASELINE_YEAR = YEARS[0]
 BOUNDARY_FILE = Path("osm") / "delhi_boundary_gaul2015.geojson"
+CLASS_STEP = 10.0
+LINE_STEP = 20
+CHANGE_LIMIT = 50.0
 CAVEAT = (
     "Each year compares Delhi monitors with more Dynamic World built-up land within 1 km against "
     "monitors with less. That gap is an observed association; traffic, industry, and station siting "
@@ -73,6 +77,39 @@ def city_trend_row(year: int, annual: dict[str, dict], built_km2: float | None) 
         "stations": len(values),
         "poor_or_worse_share": round(100.0 * poor / days, 1) if days else None,
     }
+
+
+def annual_classes(values: list[float]) -> dict[str, Any]:
+    """One set of AQI classes for every year, so a colour means the same AQI in each year."""
+    edges = fixed_breaks(values, CLASS_STEP)
+    levels = [edge for edge in edges[1:-1] if round(edge) % LINE_STEP == 0]
+    return {"edges": edges, "classes": class_colours(edges), "line_levels": levels}
+
+
+def change_classes() -> dict[str, Any]:
+    """Classes for the change in annual AQI between two years, the same for every pair."""
+    edges = change_breaks(CHANGE_LIMIT, CLASS_STEP)
+    levels = [float(level) for level in range(-int(CHANGE_LIMIT) + 10, int(CHANGE_LIMIT), LINE_STEP)]
+    return {"edges": edges, "classes": change_colours(edges), "line_levels": levels}
+
+
+def year_samples(features: list[dict], year: int) -> list[tuple[float, float, float]]:
+    key = str(year)
+    return [
+        (*feature["geometry"]["coordinates"], feature["properties"]["years"][key]["aqi"])
+        for feature in features
+        if key in feature["properties"]["years"]
+    ]
+
+
+def change_samples(features: list[dict], base: int, year: int) -> list[tuple[float, float, float]]:
+    """Annual AQI in `year` minus `base`, for monitors with a valid annual mean in both."""
+    start, end = str(base), str(year)
+    return [
+        (*feature["geometry"]["coordinates"], round(years[end]["aqi"] - years[start]["aqi"], 1))
+        for feature in features
+        if start in (years := feature["properties"]["years"]) and end in years
+    ]
 
 
 def load_boundary(raw: Path) -> BaseGeometry | None:
@@ -125,6 +162,8 @@ def delhi_builtup_aqi_years() -> dict[str, Any]:
         for station in stations
         if by_station[station["station_id"]]
     ]
+    station_years = [entry["aqi"] for years_by_station in by_station.values() for entry in years_by_station.values()]
+    classes = annual_classes(station_years) if station_years else None
     return {
         "status": "ok" if any(item["status"] == "ok" for item in years) else "insufficient_data",
         "city": "Delhi",
@@ -133,6 +172,8 @@ def delhi_builtup_aqi_years() -> dict[str, Any]:
         "city_trend": city,
         "type": "FeatureCollection",
         "features": features,
+        "aqi_classes": classes,
+        "change_classes": change_classes(),
         "aqi_method": f"{LABEL}. Daily means need 16 or more hours; a station-year needs {MIN_DAYS} or more valid days.",
         "pollutants": [name for name in SLUGS if name not in ("CO", "O3")],
         "radius_km": 1,
