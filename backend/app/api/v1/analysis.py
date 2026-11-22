@@ -7,13 +7,18 @@ from sqlalchemy.orm import Session
 import pandas as pd
 
 from app.analytics.correlation import correlate
+from app.analytics.delhi_land_use import delhi_land_use_contrasts
 from app.analytics.esda import require_station_threshold, station_zscore_hotspots
 from app.analytics.priority import DEFAULT_WEIGHTS, score_cell
-from app.analytics.regression import fit_ols
+from app.analytics.regression import builtup_aqi_effect, fit_ols
 from app.api.deps import current_city, db_session
+from app.core.config import get_settings
 from app.core.study_area import load_city_config
 from app.geospatial.buffers import buffer_bands
+from app.geospatial.contours import aqi_contours
 from app.geospatial.crs import area_sq_km
+from app.ingestion.cpcb_snapshot import load_cpcb_snapshot
+from app.remote_sensing.dynamic_world import built_up_shares
 from app.models.analysis import AnalysisRun
 from app.models.city import City
 from app.models.grid import AnalysisGrid, GridEnvironmentalMetric
@@ -109,6 +114,82 @@ def regression(body: RegressionRequest, city: City = Depends(current_city), db: 
     result["holdout"] = "none in v1; random splits are avoided because observations share locations"
     run = create_run(db, city.id, "regression", body.model_dump())
     execute_run(db, run.id, lambda: result)
+    result["run_id"] = run.id
+    return result
+
+
+@router.post("/builtup-aqi")
+def builtup_aqi(city: City = Depends(current_city), db: Session = Depends(db_session)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "Built-up and AQI contours are computed for Delhi")
+    settings = get_settings()
+    raw = settings.resolve_path(settings.raw_data_dir)
+    snapshot = load_cpcb_snapshot(raw / "cpcb_delhi_realtime_2026-11-22.json")
+    years = list(range(2017, 2027))
+    raster_dir = raw / "dynamicworld"
+    located = []
+    for feature in snapshot.get("features", []):
+        properties = feature["properties"]
+        if properties.get("aqi") is None:
+            continue
+        lon, lat = feature["geometry"]["coordinates"]
+        located.append((properties["name"], float(lon), float(lat), float(properties["aqi"])))
+    points = [(lon, lat) for _, lon, lat, _ in located]
+    shares_by_year: dict[int, list[float | None]] = {}
+    for year in years:
+        shares_by_year[year] = built_up_shares(raster_dir / f"DynamicWorld_label_{year}_delhi.tif", points)
+    stations = []
+    for index, (name, lon, lat, aqi) in enumerate(located):
+        built = {
+            year: shares_by_year[year][index]
+            for year in years
+            if shares_by_year[year][index] is not None
+        }
+        stations.append({"name": name, "longitude": lon, "latitude": lat, "aqi": aqi, "built_up": built})
+
+    result = builtup_aqi_effect(stations)
+    result["source"] = "Dynamic World built-up share within 1 km, CPCB AQI snapshot 2026-11-22"
+    if result.get("status") != "ok":
+        return result
+    features = [
+        {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [station["longitude"], station["latitude"]]},
+            "properties": {
+                "name": station["name"],
+                "observed_aqi": station["observed_aqi"],
+                "observed_category": station["observed_category"],
+                "built_up": station["built_up"],
+                "implied_aqi": station["implied_aqi"],
+                "implied_category": station["implied_category"],
+            },
+        }
+        for station in result.get("stations", [])
+    ]
+    result["type"] = "FeatureCollection"
+    result["features"] = features
+    boundary = to_shape(city.boundary)
+    projected = f"EPSG:{city.projected_srid}"
+    contours = {}
+    for year in years:
+        samples = []
+        for station in result.get("stations", []):
+            value = station["observed_aqi"] if year == 2026 else station["implied_aqi"].get(str(year))
+            if value is None:
+                continue
+            samples.append((station["longitude"], station["latitude"], float(value)))
+        contours[str(year)] = aqi_contours(samples, boundary, projected)
+    result["contours"] = contours
+    result["boundary"] = {"type": "Feature", "geometry": mapping(boundary), "properties": {"name": city.name}}
+    summary = {
+        "status": result["status"],
+        "n": result.get("n"),
+        "r_squared": result.get("r_squared"),
+        "aqi_per_10_built_up_points": result.get("aqi_per_10_built_up_points"),
+        "pvalues": result.get("pvalues"),
+    }
+    run = create_run(db, city.id, "builtup_aqi", {"observed_year": 2026, "window_m": 1000})
+    execute_run(db, run.id, lambda: summary)
     result["run_id"] = run.id
     return result
 
@@ -264,6 +345,16 @@ def run_detail(run_id: str, db: Session = Depends(db_session)):
         "started_at": row.started_at,
         "completed_at": row.completed_at,
     }
+
+
+@router.get("/delhi-land-use")
+def delhi_land_use(city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "Land-use contrasts are computed for Delhi")
+    result = delhi_land_use_contrasts()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi Dynamic World or station files are missing")
+    return result
 
 
 @router.get("/scatter")

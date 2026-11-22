@@ -7,7 +7,7 @@ import { formatNumber } from "@/lib/format";
 
 export function LandCoverPage() {
   const { filters } = useFilters();
-  const stats = useQuery({ queryKey: ["lc-stats", filters.city], queryFn: () => apiGet<any>("/land-cover/statistics", { city: filters.city, year: 2024 }) });
+  const stats = useQuery({ queryKey: ["lc-stats", filters.city], queryFn: () => apiGet<any>("/land-cover/statistics", { city: filters.city, year: 2021 }) });
   const change = useQuery({ queryKey: ["lc-change", filters.city], queryFn: () => apiGet<any>("/land-cover/change", { city: filters.city }) });
   const indices = useQuery({ queryKey: ["lc-idx", filters.city], queryFn: () => apiGet<any>("/land-cover/indices", { city: filters.city }) });
   const rasters = useQuery({ queryKey: ["rasters"], queryFn: () => apiGet<any[]>("/rasters") });
@@ -15,18 +15,19 @@ export function LandCoverPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <SampleBadge />
-        <DataKindBadge kind="classified" />
+        {stats.data?.is_sample ? <SampleBadge /> : <DataKindBadge kind="classified" />}
       </div>
-      <Alert tone="info">
-        Real Sentinel-2 processing requires Copernicus Data Space or Earth Engine credentials. Until then the UI shows a labeled sample raster, not a fabricated satellite product.
-      </Alert>
+      {stats.data?.is_sample ? (
+        <Alert tone="info">
+          These figures stay labeled sample until ESA WorldCover and Sentinel-2 composites are loaded.
+        </Alert>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-3">
         <Card title="Mean NDVI">{formatNumber(indices.data?.mean_ndvi, 3)} <p className="text-xs text-stone-500">{indices.data?.note}</p></Card>
         <Card title="Mean NDBI">{formatNumber(indices.data?.mean_ndbi, 3)}</Card>
         <Card title="Raster assets">{rasters.data?.length ?? 0}</Card>
       </div>
-      <Card title="Class area (sample 2024)">
+      <Card title={`Class area (${stats.data?.year ?? 2021})`}>
         <table className="min-w-full text-sm">
           <thead><tr className="text-left text-xs uppercase text-stone-500"><th>Class</th><th>km²</th><th>%</th></tr></thead>
           <tbody>
@@ -40,12 +41,12 @@ export function LandCoverPage() {
           </tbody>
         </table>
       </Card>
-      <Card title="Change 2020 to 2024">
+      <Card title={`Change ${change.data?.baseline_year ?? 2020} to ${change.data?.recent_year ?? 2024}`}>
         <p className="mb-3 text-sm text-stone-600">{change.data?.caveat}</p>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase text-stone-500">
-              <th>Class</th><th>2020 km²</th><th>2024 km²</th><th>Change km²</th><th>pp change</th>
+              <th>Class</th><th>{change.data?.baseline_year ?? 2020} km²</th><th>{change.data?.recent_year ?? 2021} km²</th><th>Change km²</th><th>pp change</th>
             </tr>
           </thead>
           <tbody>

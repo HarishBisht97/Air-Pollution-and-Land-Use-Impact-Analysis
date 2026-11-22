@@ -3,6 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import db_session
+from app.core.config import get_settings
+from app.ingestion.cpcb_snapshot import load_cpcb_snapshot
 from app.models.catalog import DatasetCatalog, IngestionBatch, RasterAsset
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
@@ -11,7 +13,7 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 @router.get("")
 def list_datasets(db: Session = Depends(db_session)):
     rows = db.scalars(select(DatasetCatalog).order_by(DatasetCatalog.dataset_name)).all()
-    return [
+    listed = [
         {
             "id": row.id,
             "dataset_name": row.dataset_name,
@@ -25,6 +27,24 @@ def list_datasets(db: Session = Depends(db_session)):
         }
         for row in rows
     ]
+    settings = get_settings()
+    snapshot = load_cpcb_snapshot(settings.resolve_path(settings.raw_data_dir) / "cpcb_delhi_realtime_2026-11-22.json")
+    if snapshot.get("available"):
+        listed.insert(
+            0,
+            {
+                "id": "cpcb-delhi-realtime",
+                "dataset_name": "CPCB real-time air quality index, Delhi",
+                "source_url": "https://www.data.gov.in/catalog/real-time-air-quality-index",
+                "license": "Government Open Data License - India",
+                "retrieved_at": None,
+                "temporal_coverage": snapshot.get("observed_at"),
+                "spatial_coverage": f"Delhi, {snapshot.get('station_count')} stations",
+                "processing_version": "data.gov.in snapshot",
+                "metadata": {"labeled_sample": False, "value_kind": "aqi_subindex"},
+            },
+        )
+    return listed
 
 
 @router.get("/{dataset_id}")

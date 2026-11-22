@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
 import { apiGet } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import { useFilters } from "@/hooks/useFilters";
 import { Alert, Card, EmptyState, Kpi, Skeleton } from "@/components/ui/Card";
 import { DataKindBadge, SampleBadge } from "@/components/ui/Badge";
+import { NdviBuiltUpChart } from "@/features/dashboard/NdviBuiltUpChart";
+import { CpcbSnapshotSummary } from "@/features/air-quality/CpcbSnapshotSummary";
 
 export function DashboardPage() {
   const { filters } = useFilters();
@@ -18,11 +20,15 @@ export function DashboardPage() {
   });
   const land = useQuery({
     queryKey: ["lulc", filters.city],
-    queryFn: () => apiGet<any>("/land-cover/statistics", { city: filters.city, year: 2024 }),
+    queryFn: () => apiGet<any>("/land-cover/statistics", { city: filters.city, year: 2021 }),
   });
   const scatter = useQuery({
     queryKey: ["scatter", filters.city],
     queryFn: () => apiGet<any>("/analysis/scatter", { city: filters.city, x: "mean_ndvi", y: "built_up_percentage" }),
+  });
+  const cpcb = useQuery({
+    queryKey: ["cpcb-snapshot", filters.city],
+    queryFn: () => apiGet<any>("/air-quality/cpcb-snapshot", { city: filters.city }),
   });
 
   if (dash.isLoading) return <Skeleton className="h-64" />;
@@ -37,42 +43,46 @@ export function DashboardPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <DataKindBadge kind="aggregated" />
-        <SampleBadge />
       </div>
+      <CpcbSnapshotSummary snapshot={cpcb.data} />
       {data.coverage_warning ? <Alert>{data.coverage_warning}</Alert> : null}
       <div className="grid gap-3 md:grid-cols-4">
         <Kpi label="City" value={data.city.name} hint={data.city.state} />
-        <Kpi label="Monitoring stations" value={String(data.station_count)} hint="Listed / imported stations only" />
-        <Kpi label={`${filters.pollutant} mean`} value={`${formatNumber(selected?.mean)} ${selected?.unit ?? ""}`} hint={`${selected?.count ?? 0} valid observations`} />
-        <Kpi label="Observations" value={formatNumber(data.observation_count, 0)} />
-        <Kpi label="Vegetation (grid mean)" value={`${formatNumber(data.vegetation_percentage)} %`} hint="From SAMPLE land-cover raster unless replaced" />
-        <Kpi label="Built-up (grid mean)" value={`${formatNumber(data.built_up_percentage)} %`} />
-        <Kpi label="Built-up change" value={`${formatNumber(data.built_up_change_sq_km)} km²`} hint="SAMPLE 2020 vs 2024 rasters (illustrated expansion, not ESA WorldCover)" />
-        <Kpi label="Datasets loaded" value={String(data.datasets.length)} />
+        <Kpi label={`${filters.pollutant} mean`} value={`${formatNumber(selected?.mean)} ${selected?.unit ?? ""}`} hint={selected?.is_sample === false ? "Hour-weighted mean of CPCB station months, XKDR Forum. Concentrations, not AQI." : "Labeled sample series."} />
+        <Kpi label="Monitoring stations" value={formatNumber(data.station_count, 0)} hint={selected?.is_sample === false ? "CPCB stations in the XKDR Delhi extract." : undefined} />
+        <Kpi label="Vegetation (grid mean)" value={`${formatNumber(data.vegetation_percentage)} %`} hint="ESA WorldCover 2021: tree cover plus grassland." />
+        <Kpi label="Built-up (grid mean)" value={`${formatNumber(data.built_up_percentage)} %`} hint="ESA WorldCover 2021, 10 m." />
+        <Kpi label="Built-up change" value={`${formatNumber(data.built_up_change_sq_km)} km²`} hint="ESA WorldCover 2020 to 2021. The two editions use different algorithms." />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title={`${filters.pollutant} monthly mean`} action={<DataKindBadge kind="aggregated" />}>
-          <div className="h-64">
+        <Card
+          title={`${filters.pollutant} monthly mean`}
+          action={series.data?.is_sample === false ? <DataKindBadge kind="aggregated" /> : <SampleBadge />}
+        >
+          <div className="h-72">
             <ResponsiveContainer>
-              <LineChart data={series.data?.series ?? []}>
+              <LineChart data={series.data?.series ?? []} margin={{ top: 8, right: 12, bottom: 24, left: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
-                <YAxis />
+                <XAxis dataKey="period" minTickGap={24} label={{ value: "Month", position: "bottom", offset: 4, style: { fontSize: 12, fill: "#44403c" } }} />
+                <YAxis width={64} label={{ value: `${filters.pollutant} (${series.data?.unit === "mg/m3" ? "mg/m³" : "µg/m³"})`, angle: -90, position: "insideLeft", style: { fontSize: 12, fill: "#44403c", textAnchor: "middle" } }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="mean" stroke="#b45309" name="Mean" />
+                <Line type="monotone" dataKey="mean" stroke="#b45309" name="City monthly mean" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
+          {series.data?.is_sample === false ? (
+            <p className="mt-2 text-xs text-stone-600">{series.data.note} {series.data.source}. {series.data.coverage}.</p>
+          ) : null}
         </Card>
         <Card title="Land-cover composition" action={<DataKindBadge kind="classified" />}>
-          <div className="h-64">
+          <div className="h-80">
             <ResponsiveContainer>
-              <BarChart data={land.data?.classes ?? []}>
+              <BarChart data={land.data?.classes ?? []} margin={{ top: 8, right: 12, bottom: 48, left: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="class_name" hide />
-                <YAxis />
+                <XAxis dataKey="class_name" interval={0} angle={-30} textAnchor="end" height={64} label={{ value: "Land-cover class", position: "bottom", offset: 28, style: { fontSize: 12, fill: "#44403c" } }} />
+                <YAxis width={56} label={{ value: "Share of mapped area (%)", angle: -90, position: "insideLeft", style: { fontSize: 12, fill: "#44403c", textAnchor: "middle" } }} />
                 <Tooltip />
-                <Bar dataKey="percentage" fill="#3f6b4a" name="% of mapped area" />
+                <Bar dataKey="percentage" fill="#3f6b4a" name="Share of mapped area (%)" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -82,18 +92,8 @@ export function DashboardPage() {
             ))}
           </ul>
         </Card>
-        <Card title="NDVI versus built-up (grid cells with indices)" action={<DataKindBadge kind="aggregated" />}>
-          <div className="h-64">
-            <ResponsiveContainer>
-              <ScatterChart>
-                <CartesianGrid />
-                <XAxis dataKey="x" name="NDVI" />
-                <YAxis dataKey="y" name="Built-up %" />
-                <Tooltip />
-                <Scatter data={scatter.data?.points ?? []} fill="#1d4e89" />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
+        <Card title="NDVI versus built-up (grid cells with indices)" action={<DataKindBadge kind="satellite_index" />}>
+          <NdviBuiltUpChart points={scatter.data?.points ?? []} />
         </Card>
         <Card title="Dataset freshness">
           <ul className="space-y-2 text-sm">

@@ -3,7 +3,8 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { apiGet } from "@/lib/api";
 import { useFilters } from "@/hooks/useFilters";
 import { Alert, Card, EmptyState, Skeleton } from "@/components/ui/Card";
-import { DataKindBadge } from "@/components/ui/Badge";
+import { DataKindBadge, SampleBadge } from "@/components/ui/Badge";
+import { CpcbSnapshotSummary } from "@/features/air-quality/CpcbSnapshotSummary";
 import { formatNumber } from "@/lib/format";
 
 export function AirQualityPage() {
@@ -20,6 +21,10 @@ export function AirQualityPage() {
     queryKey: ["obs", filters],
     queryFn: () => apiGet<any>("/air-quality/observations", { city: filters.city, pollutant: filters.pollutant, start: filters.from, end: filters.to, limit: 200 }),
   });
+  const cpcb = useQuery({
+    queryKey: ["cpcb-snapshot", filters.city],
+    queryFn: () => apiGet<any>("/air-quality/cpcb-snapshot", { city: filters.city }),
+  });
 
   if (summary.isLoading) return <Skeleton className="h-48" />;
   if (summary.isError) return <Alert>Air-quality API request failed.</Alert>;
@@ -31,7 +36,16 @@ export function AirQualityPage() {
 
   return (
     <div className="space-y-4">
+      <CpcbSnapshotSummary snapshot={cpcb.data} />
       {summary.data.coverage_warning ? <Alert>{summary.data.coverage_warning}</Alert> : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {daily.data?.is_sample === false ? <DataKindBadge kind="aggregated" /> : <SampleBadge />}
+        <p className="text-sm text-stone-600">
+          {daily.data?.is_sample === false
+            ? `Means and the monthly chart use CPCB station concentrations from ${daily.data.source}. These are not the air-quality index.`
+            : "The mean, NAAQS line, and monthly chart below use the labeled sample series."}
+        </p>
+      </div>
       <div className="grid gap-3 md:grid-cols-4">
         <Card title="Mean">{formatNumber(pollutant?.mean)} {pollutant?.unit}</Card>
         <Card title="Median">{formatNumber(pollutant?.median)}</Card>
@@ -49,17 +63,17 @@ export function AirQualityPage() {
         )}
       </Card>
       <Card title="Monthly series" action={<DataKindBadge kind="aggregated" />}>
-        <div className="h-72">
+        <div className="h-80">
           <ResponsiveContainer>
-            <LineChart data={daily.data?.series ?? []}>
+            <LineChart data={daily.data?.series ?? []} margin={{ top: 8, right: 12, bottom: 24, left: 16 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="period" />
-              <YAxis />
+              <XAxis dataKey="period" minTickGap={24} label={{ value: "Month", position: "bottom", offset: 4, style: { fontSize: 12, fill: "#44403c" } }} />
+              <YAxis width={64} label={{ value: `${filters.pollutant} (${daily.data?.unit === "mg/m3" ? "mg/m³" : "µg/m³"})`, angle: -90, position: "insideLeft", style: { fontSize: 12, fill: "#44403c", textAnchor: "middle" } }} />
               <Tooltip />
-              <Legend />
-              <Line dataKey="mean" name="Mean" stroke="#b45309" />
-              <Line dataKey="min" name="Min" stroke="#a8a29e" />
-              <Line dataKey="max" name="Max" stroke="#7c2d12" />
+              <Legend verticalAlign="top" />
+              <Line dataKey="mean" name="City monthly mean" stroke="#b45309" dot={false} />
+              <Line dataKey="min" name="Lowest station mean" stroke="#a8a29e" dot={false} />
+              <Line dataKey="max" name="Highest station mean" stroke="#7c2d12" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -69,7 +83,7 @@ export function AirQualityPage() {
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b text-xs uppercase text-stone-500">
-                <th className="py-2">Time (UTC)</th>
+                <th className="py-2">Month start (IST)</th>
                 <th>Station</th>
                 <th>Value</th>
                 <th>Flag</th>

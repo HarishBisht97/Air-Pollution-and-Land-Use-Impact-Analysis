@@ -5,8 +5,36 @@ import L from "leaflet";
 import { apiGet } from "@/lib/api";
 import { useFilters } from "@/hooks/useFilters";
 import { Alert, Card } from "@/components/ui/Card";
-import { DataKindBadge, SampleBadge } from "@/components/ui/Badge";
+import { DataKindBadge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
+
+const AQI_COLORS: Record<string, string> = {
+  Good: "#3f6b4a",
+  Satisfactory: "#65a30d",
+  Moderate: "#ca8a04",
+  Poor: "#ea580c",
+  "Very Poor": "#b91c1c",
+  Severe: "#7f1d1d",
+};
+const AQI_MISSING = "#78716c";
+
+const GRID_BINS: { label: string; color: string; above: number }[] = [
+  { label: "Above 100 µg/m³", color: "#7c2d12", above: 100 },
+  { label: "Above 80 to 100 µg/m³", color: "#c2410c", above: 80 },
+  { label: "Above 60 to 80 µg/m³", color: "#ea580c", above: 60 },
+  { label: "60 µg/m³ or below", color: "#d97706", above: -Infinity },
+];
+const GRID_EMPTY = "#e7e5e4";
+
+function gridFill(concentration: number | null | undefined) {
+  if (concentration == null) return GRID_EMPTY;
+  return GRID_BINS.find((bin) => concentration > bin.above)?.color ?? GRID_BINS[GRID_BINS.length - 1].color;
+}
+
+function aqiMarker(latlng: L.LatLngExpression, category: string | null) {
+  const fill = AQI_COLORS[category ?? ""] ?? "#78716c";
+  return L.circleMarker(latlng, { radius: 8, color: "#1c1917", fillColor: fill, fillOpacity: 0.92, weight: 1 });
+}
 
 function FlyTo({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
   const map = useMap();
@@ -33,6 +61,7 @@ export function MapPage() {
   const parks = useQuery({ queryKey: ["parks", filters.city], queryFn: () => apiGet<any>("/green-spaces", { city: filters.city }) });
   const industry = useQuery({ queryKey: ["industry", filters.city], queryFn: () => apiGet<any>("/industrial", { city: filters.city }) });
   const grid = useQuery({ queryKey: ["grid", filters.city], queryFn: () => apiGet<any>("/grid", { city: filters.city, limit: 5000 }) });
+  const cpcb = useQuery({ queryKey: ["cpcb-snapshot", filters.city], queryFn: () => apiGet<any>("/air-quality/cpcb-snapshot", { city: filters.city }) });
 
   const cityBounds = useMemo(() => {
     const geometry = city.data?.boundary?.geometry;
@@ -46,9 +75,15 @@ export function MapPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <DataKindBadge kind="observed" />
-        <SampleBadge />
-        {stations.data?.coverage_warning ? <Alert>{stations.data.coverage_warning}</Alert> : null}
+        <DataKindBadge kind="aggregated" />
+        {cpcb.data?.available ? (
+          <Alert tone="info">
+            Station colours are the CPCB air-quality index for {cpcb.data.observed_at} IST ({cpcb.data.station_count} stations, data.gov.in). {cpcb.data.note}
+          </Alert>
+        ) : null}
+        {cpcb.isError || (cpcb.isSuccess && !cpcb.data?.available) ? (
+          <Alert>{cpcb.data?.message ?? "CPCB snapshot is not loaded."}</Alert>
+        ) : null}
       </div>
       <div className="grid gap-3 lg:grid-cols-[1fr_16rem]">
         <div className="h-[70vh] overflow-hidden rounded-xl border border-stone-200">
@@ -61,7 +96,24 @@ export function MapPage() {
               <LayersControl.Overlay checked name="City boundary">
                 {city.data?.boundary ? <GeoJSON data={city.data.boundary} style={{ color: "#1c1917", weight: 2, fillOpacity: 0.04 }} /> : null}
               </LayersControl.Overlay>
-              <LayersControl.Overlay checked name="Monitoring stations">
+              <LayersControl.Overlay checked name="CPCB stations">
+                {cpcb.data?.features?.length ? (
+                  <GeoJSON
+                    data={cpcb.data}
+                    pointToLayer={(feature, latlng) => aqiMarker(latlng, feature.properties?.category)}
+                    onEachFeature={(feature, layer) => {
+                      const p = feature.properties;
+                      const lines = Object.entries(p.subindices ?? {})
+                        .map(([name, value]) => `${name} sub-index ${value}`)
+                        .join("<br/>");
+                      layer.bindPopup(
+                        `<strong>${p.name}</strong><br/>AQI ${p.aqi ?? "—"} · ${p.category ?? "not enough pollutants"}<br/>Set by ${p.responsible_pollutant ?? "—"}<br/>${lines}<br/>${p.observed_at} IST<br/>${p.source}. Sub-indices, not concentrations.`,
+                      );
+                    }}
+                  />
+                ) : null}
+              </LayersControl.Overlay>
+              <LayersControl.Overlay name="Station concentration means">
                 {spatial.data ? (
                   <GeoJSON
                     data={spatial.data}
@@ -79,12 +131,12 @@ export function MapPage() {
                 {grid.data ? (
                   <GeoJSON
                     data={grid.data}
-                    style={(feature) => {
-                      const conc = feature?.properties?.mean_concentration;
-                      const fill =
-                        conc == null ? "#e7e5e4" : conc > 100 ? "#7c2d12" : conc > 80 ? "#c2410c" : conc > 60 ? "#ea580c" : "#d97706";
-                      return { color: "#57534e", weight: 0.4, fillColor: fill, fillOpacity: opacity };
-                    }}
+                    style={(feature) => ({
+                      color: "#57534e",
+                      weight: 0.4,
+                      fillColor: gridFill(feature?.properties?.mean_concentration),
+                      fillOpacity: opacity,
+                    })}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties;
                       const estimateNote = p.pollution_assignment === "idw_estimate" ? "IDW estimate, not a measurement" : p.pollution_assignment;
@@ -113,16 +165,33 @@ export function MapPage() {
             Grid opacity
             <input className="w-full" type="range" min={0.15} max={0.9} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} />
           </label>
-          <ul className="mt-3 space-y-1 text-sm">
-            <li><span className="mr-2 inline-block h-3 w-3 rounded-full bg-clay" /> Station mean (observed)</li>
-            <li><span className="mr-2 inline-block h-3 w-3 bg-clay" /> Higher PM2.5 (IDW estimate, not a measurement)</li>
-            <li><span className="mr-2 inline-block h-3 w-3 bg-stone-200" /> No concentration assigned</li>
+          <p className="mt-3 text-xs font-medium text-stone-700">CPCB station AQI</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            {Object.entries(AQI_COLORS).map(([label, color]) => (
+              <li key={label}><span className="mr-2 inline-block h-3 w-3 rounded-full" style={{ backgroundColor: color }} /> {label}</li>
+            ))}
+            <li><span className="mr-2 inline-block h-3 w-3 rounded-full" style={{ backgroundColor: AQI_MISSING }} /> Not enough pollutants</li>
+          </ul>
+          <p className="mt-3 text-xs font-medium text-stone-700">PM2.5 in cells with a monitor</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            {GRID_BINS.map((bin) => (
+              <li key={bin.label}><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: bin.color }} /> {bin.label}</li>
+            ))}
+            <li><span className="mr-2 inline-block h-3 w-3 border border-stone-300" style={{ backgroundColor: GRID_EMPTY }} /> No value</li>
+          </ul>
+          <p className="mt-3 text-xs font-medium text-stone-700">Other layers</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            <li><span className="mr-2 inline-block h-0.5 w-3 bg-stone-700 align-middle" /> Major roads</li>
+            <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: "#3f6b4a" }} /> Green spaces</li>
+            <li><span className="mr-2 inline-block h-3 w-3" style={{ backgroundColor: "#b45309" }} /> Industrial sites</li>
+            <li><span className="mr-2 inline-block h-3 w-3 rounded-full border-2" style={{ backgroundColor: "#b45309", borderColor: "#7c2d12" }} /> Station concentration mean</li>
+            <li><span className="mr-2 inline-block h-0.5 w-3 bg-stone-900 align-middle" /> City boundary</li>
             <li>Basemap: OpenStreetMap</li>
           </ul>
           <p className="mt-3 text-xs text-stone-600">
-            {industry.data?.disclaimer} Grid fill uses an IDW estimate only when at least eight stations exist. Station markers remain observed values.
+            Station circles are the CPCB index for one hour, not concentrations. Grid colour is the XKDR PM2.5 mean, in µg/m³, only for a cell that contains a monitor. Cells without a monitor are left empty. Roads, parks, and industrial sites are OpenStreetMap. {industry.data?.disclaimer}
           </p>
-          <p className="mt-2 text-xs">Stations loaded: {formatNumber(stations.data?.features?.length, 0)}</p>
+          <p className="mt-2 text-xs">CPCB index stations: {formatNumber(cpcb.data?.station_count, 0)}. Concentration stations: {formatNumber(stations.data?.features?.length, 0)}.</p>
         </Card>
       </div>
     </div>

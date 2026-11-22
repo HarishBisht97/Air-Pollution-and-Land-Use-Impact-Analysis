@@ -15,7 +15,7 @@ export function DatasetsPage() {
     if (!file) return;
     const form = new FormData();
     form.append("file", file);
-    form.append("labeled_sample", "true");
+    form.append("labeled_sample", "false");
     form.append("source", "manual_csv");
     const result = await apiUpload<any>("/ingestion/air-quality/csv", form, { city: filters.city });
     setMessage(`Inserted ${result.inserted}, skipped ${result.skipped}, rejected ${result.rejected}`);
@@ -24,7 +24,7 @@ export function DatasetsPage() {
   return (
     <div className="space-y-4">
       <Alert tone="info">
-        CPCB CCR has no official public bulk API in this project. Download CSV/XLSX from the CCR dashboard and import it here. Do not scrape the portal.
+        Delhi charts use monthly CPCB concentrations from the XKDR extract, January 2009 through August 2025. The catalog’s CPCB row is the 22 November 2026 index snapshot, which is separate from those concentrations. A CSV import is for a pollutant or city that extract does not cover. Do not scrape the CPCB portal.
       </Alert>
       <Card title="Import air-quality CSV">
         <input type="file" accept=".csv" onChange={onCsv} />
