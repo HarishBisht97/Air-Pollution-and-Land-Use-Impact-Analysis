@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from shapely.geometry import mapping
 from sqlalchemy import select
@@ -6,6 +8,7 @@ from sqlalchemy.orm import Session
 
 import pandas as pd
 
+from app.analytics.builtup_aqi_years import BASELINE_YEAR, YEARS, delhi_builtup_aqi_years, load_boundary
 from app.analytics.builtup_concentration_change import delhi_builtup_concentration_change
 from app.analytics.correlation import correlate
 from app.analytics.delhi_land_use import delhi_land_use_contrasts
@@ -19,7 +22,7 @@ from app.geospatial.buffers import buffer_bands
 from app.geospatial.contours import aqi_contours
 from app.geospatial.crs import area_sq_km
 from app.ingestion.cpcb_snapshot import load_cpcb_snapshot
-from app.remote_sensing.dynamic_world import built_up_shares
+from app.remote_sensing.dynamic_world import built_up_overlay_png, built_up_shares
 from app.models.analysis import AnalysisRun
 from app.models.city import City
 from app.models.grid import AnalysisGrid, GridEnvironmentalMetric
@@ -356,6 +359,39 @@ def builtup_concentration_change(city: City = Depends(current_city)):
     if result.get("status") == "missing_data":
         raise HTTPException(404, "Delhi station or Dynamic World files are missing")
     return result
+
+
+@router.get("/builtup-aqi-years")
+def builtup_aqi_years(city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "Built-up and annual AQI are computed for Delhi")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi daily station files or Dynamic World files are missing")
+    _, bounds = _builtup_overlay(BASELINE_YEAR)
+    return {**result, "overlay_bounds": bounds}
+
+
+@lru_cache(maxsize=len(YEARS))
+def _builtup_overlay(year: int) -> tuple[bytes, list[list[float]]]:
+    settings = get_settings()
+    raw = settings.resolve_path(settings.raw_data_dir)
+    raster_dir = raw / "dynamicworld"
+    return built_up_overlay_png(
+        raster_dir / f"DynamicWorld_label_{year}_delhi.tif",
+        raster_dir / f"DynamicWorld_label_{BASELINE_YEAR}_delhi.tif",
+        load_boundary(raw),
+    )
+
+
+@router.get("/builtup-overlay/{year}")
+def builtup_overlay(year: int, city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The built-up overlay is computed for Delhi")
+    if year not in YEARS:
+        raise HTTPException(404, f"Built-up overlay covers {YEARS[0]} to {YEARS[-1]}")
+    png, _ = _builtup_overlay(year)
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.get("/delhi-land-use")
