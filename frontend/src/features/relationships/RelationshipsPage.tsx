@@ -9,6 +9,92 @@ import { formatNumber } from "@/lib/format";
 import { NdviBuiltUpChart } from "@/features/dashboard/NdviBuiltUpChart";
 import { BuiltUpAqi } from "@/features/relationships/BuiltUpAqi";
 
+type ConcentrationPoint = {
+  name: string;
+  built_up_change: number;
+  concentration_change: number;
+  fitted_change: number | null;
+};
+
+type ConcentrationFit = {
+  pollutant: string;
+  unit: string;
+  status: string;
+  message?: string;
+  caveat?: string;
+  n?: number;
+  r_squared?: number;
+  params?: { const?: number; built_up_change?: number };
+  pvalues?: { built_up_change?: number };
+  pearson?: { coefficient?: number; p_value?: number };
+  points?: ConcentrationPoint[];
+};
+
+type ConcentrationPayload = {
+  baseline_year: number;
+  recent_year: number;
+  source: string;
+  pollutants: ConcentrationFit[];
+};
+
+function fittedLine(fit: ConcentrationFit) {
+  const intercept = fit.params?.const;
+  const slope = fit.params?.built_up_change;
+  const points = fit.points ?? [];
+  if (intercept == null || slope == null || points.length < 2) return [];
+  const changes = points.map((point) => point.built_up_change);
+  const min = Math.min(...changes);
+  const max = Math.max(...changes);
+  return [
+    { built_up_change: min, concentration_change: intercept + slope * min },
+    { built_up_change: max, concentration_change: intercept + slope * max },
+  ];
+}
+
+function ConcentrationScatter({ fit, baseline, recent }: { fit: ConcentrationFit; baseline: number; recent: number }) {
+  const line = fittedLine(fit);
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium text-stone-800">{fit.pollutant}</h3>
+      {fit.status !== "ok" ? <p className="text-sm text-stone-600">{fit.message}</p> : null}
+      {fit.status === "ok" ? (
+        <>
+          <div className="h-80">
+            <ResponsiveContainer>
+              <ScatterChart margin={{ top: 8, right: 16, bottom: 36, left: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  dataKey="built_up_change"
+                  name={`Built-up change, ${baseline}–${recent} (percentage points)`}
+                  unit=" pp"
+                  label={{ value: `Built-up change, ${baseline}–${recent} (percentage points)`, position: "bottom", offset: 16, style: { fontSize: 12, fill: "#44403c" } }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="concentration_change"
+                  name={`Change in annual ${fit.pollutant} (µg/m³)`}
+                  width={64}
+                  label={{ value: `Change in annual ${fit.pollutant} (µg/m³)`, angle: -90, position: "insideLeft", style: { fontSize: 12, fill: "#44403c", textAnchor: "middle" } }}
+                />
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                <Scatter name="Stations" data={fit.points ?? []} fill="#14532d" />
+                <Scatter name="Fitted line" data={line} line={{ stroke: "#7f1d1d", strokeWidth: 2 }} shape={() => <g />} legendType="none" />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-2 text-sm text-stone-700">
+            Pearson r = {formatNumber(fit.pearson?.coefficient, 3)} (p={formatNumber(fit.pearson?.p_value, 3)}).
+            Regression R² = {formatNumber(fit.r_squared, 3)} (p={formatNumber(fit.pvalues?.built_up_change, 3)}, n={fit.n}).
+            Each additional percentage point of built-up is associated with {formatNumber(fit.params?.built_up_change, 2)} µg/m³.
+          </p>
+          <p className="mt-2 text-sm text-stone-600">{fit.caveat}</p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 type ChangePoint = { name: string; built_up_change: number; aqi: number; fitted_aqi: number | null };
 
 type ChangeFit = {
@@ -32,6 +118,10 @@ export function RelationshipsPage() {
     queryKey: ["scatter-rel", filters.city],
     queryFn: () => apiGet<any>("/analysis/scatter", { city: filters.city, x: "mean_ndvi", y: "built_up_percentage" }),
   });
+  const measured = useQuery({
+    queryKey: ["builtup-concentration-change", filters.city],
+    queryFn: () => apiGet<ConcentrationPayload>("/analysis/builtup-concentration-change", { city: filters.city }),
+  });
   const model = useQuery({
     queryKey: ["builtup-aqi", filters.city],
     queryFn: () => apiPost<{ built_up_change?: ChangeFit }>(`/analysis/builtup-aqi?city=${filters.city}`, {}),
@@ -53,6 +143,18 @@ export function RelationshipsPage() {
 
   return (
     <div className="space-y-4">
+      <Card title={`Measured change, ${measured.data?.baseline_year ?? 2018}–${measured.data?.recent_year ?? 2024}`} action={<DataKindBadge kind="statistical_estimate" />}>
+        <p className="mb-3 text-sm text-stone-600">
+          Each point is one Delhi monitor. Built-up share is Dynamic World class 6 within 1 km. Concentrations are hour-weighted annual means with at least six complete months. {measured.data?.source}
+        </p>
+        {measured.isLoading ? <p className="text-sm text-stone-600">Comparing station changes…</p> : null}
+        {measured.isError ? <Alert>Could not load the measured built-up and concentration changes.</Alert> : null}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {(measured.data?.pollutants ?? []).map((fit) => (
+            <ConcentrationScatter key={fit.pollutant} fit={fit} baseline={measured.data?.baseline_year ?? 2018} recent={measured.data?.recent_year ?? 2024} />
+          ))}
+        </div>
+      </Card>
       <BuiltUpAqi />
       <Alert>
         These plots use grid-cell land-cover and index values. Pollution is assigned only to cells that contain a monitor. Correlation is not causation. Meteorology is not controlled.

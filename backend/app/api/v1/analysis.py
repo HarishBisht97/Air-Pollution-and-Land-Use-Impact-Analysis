@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 import pandas as pd
 
+from app.analytics.builtup_concentration_change import delhi_builtup_concentration_change
 from app.analytics.correlation import correlate
 from app.analytics.delhi_land_use import delhi_land_use_contrasts
 from app.analytics.esda import require_station_threshold, station_zscore_hotspots
@@ -345,6 +346,16 @@ def run_detail(run_id: str, db: Session = Depends(db_session)):
         "started_at": row.started_at,
         "completed_at": row.completed_at,
     }
+
+
+@router.get("/builtup-concentration-change")
+def builtup_concentration_change(city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "Built-up and concentration change is computed for Delhi")
+    result = delhi_builtup_concentration_change()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi station or Dynamic World files are missing")
+    return result
 
 
 @router.get("/delhi-land-use")
