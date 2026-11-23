@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import { Alert, Card, Kpi, Skeleton } from "@/components/ui/Card";
-import { type BuiltUpAqiYears, useAnnualAqiSurface, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
+import { type BuiltUpAqiYears, partialYearNote, useAnnualAqiSurface, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
 import { BuiltUpTrendChart, TercileGapChart, gapSummary } from "@/features/relationships/BuiltUpAqiYearsCharts";
 import { LandUseContrastChart, type LandUsePayload, useLandUseContrasts } from "@/features/scenarios/LandUseScenariosPage";
 import { StationChangeTable } from "@/features/map/StationChangeTable";
@@ -157,10 +157,10 @@ function GapStep({ data }: { data: BuiltUpAqiYears }) {
   return (
     <div className="space-y-4">
       <Headline>
-        In {summary.allPositive ? "every" : "most"} year from {first.year} to {last.year}, the most built-up third of monitors had worse air
+        In {summary.allPositive ? "every" : "most"} year from {first.year} to {last.year}, monitors with the most built-up land nearby had worse air
       </Headline>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Kpi label="AQI gap, most vs least built-up third" value={`${formatNumber(summary.minGap, 0)}–${formatNumber(summary.maxGap, 0)}`} hint="AQI points, depending on the year" />
+        <Kpi label="AQI gap, most vs least built-up nearby" value={`${formatNumber(summary.minGap, 0)}–${formatNumber(summary.maxGap, 0)}`} hint="AQI points, depending on the year" />
         <Kpi label="Pearson r, built-up vs AQI" value={`${formatNumber(summary.minR, 2)}–${formatNumber(summary.maxR, 2)}`} hint={`Positive in all ${summary.years} years`} />
         <Kpi label="AQI per 10 points of built-up" value={`+${formatNumber(summary.minSlope, 1)} to +${formatNumber(summary.maxSlope, 1)}`} hint="Within 1 km of the monitor" />
       </div>
@@ -187,6 +187,7 @@ function TwistStep({ data }: { data: BuiltUpAqiYears }) {
       <Headline>
         Yet the city mean AQI fell from {formatNumber(first.mean_aqi, 0)} to {formatNumber(last.mean_aqi, 0)} while Delhi kept building
       </Headline>
+      {last.partial ? <p className="text-sm text-stone-600">{partialYearNote(last)}</p> : null}
       <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
         <div className="h-[48vh]">
           <BuiltUpTrendChart trend={data.city_trend} />
@@ -238,14 +239,14 @@ function EvidenceStep({ landUse }: { landUse: LandUsePayload | undefined }) {
             row && row.status === "ok" ? (
               <Kpi
                 key={row.pollutant}
-                label={`${row.pollutant}, most vs least built-up third (${year})`}
+                label={`${row.pollutant}, most vs least built-up nearby (${year})`}
                 value={`${signed(row.percent_difference ?? 0)}%`}
                 hint={`${formatNumber(row.low_mean, 1)} → ${formatNumber(row.high_mean, 1)} ${row.unit}`}
               />
             ) : null,
           )}
           <p className="text-sm text-stone-600">
-            Same comparison as Badia et al. (2025): monitors in the highest third of a land cover within 1 km against the lowest third. {landUse?.note}
+            Same comparison as Badia et al. (2025): monitors with the most of a land cover within 1 km against monitors with the least. {landUse?.note}
           </p>
         </div>
       </div>
@@ -273,8 +274,8 @@ function TakeawayStep({ data }: { data: BuiltUpAqiYears }) {
           <ul className="list-disc space-y-2 pl-5 text-sm text-stone-700">
             <li>Association, not cause: traffic, industry, and monitor siting come with built-up land.</li>
             <li>The map between monitors is interpolated from 32–39 stations, so small patches are estimates.</li>
-            <li>Dynamic World labels shift a little from year to year; comparisons use thirds of monitors and multi-year trends.</li>
-            <li>Station data ends in 2024 for most pollutants; CO and ozone are left out of the daily AQI.</li>
+            <li>Dynamic World labels shift a little from year to year; comparisons use three equal groups of monitors and multi-year trends.</li>
+            <li>Through 2024, annual AQI is built from daily concentrations and leaves out CO and ozone. 2025 and 2026 use CPCB's published hourly AQI; 2026 stops at 31 October.</li>
           </ul>
         </Card>
       </div>
@@ -291,9 +292,9 @@ const STEPS: Step[] = [
     notes: (data) => {
       const { first, last, minStations, maxStations } = trendEnds(data);
       return [
-        "Does urbanization go with worse air in Delhi? I combined satellite land cover with seven years of official monitor data.",
+        "Does urbanization go with worse air in Delhi? I combined satellite land cover with official monitor data.",
         `Land cover is Google Dynamic World at 10 m, one map per year. Air quality is ${minStations}–${maxStations} CPCB monitors from ${first.year} to ${last.year}.`,
-        "I computed the official CPCB AQI myself from daily PM2.5, PM10, NO2, SO2, and NH3.",
+        "Through 2024 I computed the CPCB AQI from daily PM2.5, PM10, NO2, SO2, and NH3. 2025 and 2026 use CPCB's published hourly AQI, and 2026 stops at 31 October.",
       ];
     },
   },
@@ -318,10 +319,10 @@ const STEPS: Step[] = [
     notes: (data) => {
       const summary = gapSummary(data);
       return [
-        "I split the monitors into thirds by how much built-up land surrounds them within 1 km.",
-        `In every year, the most built-up third had worse annual AQI than the least built-up third, by ${formatNumber(summary.minGap, 0)} to ${formatNumber(summary.maxGap, 0)} points.`,
+        "I split the monitors into three equal groups by how much built-up land is within 1 km.",
+        `In every year, monitors with the most built-up land nearby had worse annual AQI than monitors with the least, by ${formatNumber(summary.minGap, 0)} to ${formatNumber(summary.maxGap, 0)} points.`,
         `The correlation is positive every year (r ${formatNumber(summary.minR, 2)} to ${formatNumber(summary.maxR, 2)}), about ${formatNumber(summary.minSlope, 1)}–${formatNumber(summary.maxSlope, 1)} AQI per 10 extra points of built-up.`,
-        "It holds in all seven years, including the COVID year, so it is not a one-off.",
+        `It holds across the ${summary.years} years with a valid comparison, including the COVID year, so it is not a one-off.`,
       ];
     },
   },
@@ -346,7 +347,7 @@ const STEPS: Step[] = [
     notes: (_data, landUse) => {
       const { pm25, no2, year } = urbanization(landUse);
       return [
-        `Using the land-use contrasts from Badia et al. 2025, monitors in the most built-up third had ${pm25?.percent_difference != null ? `${signed(pm25.percent_difference)}% PM2.5` : "higher PM2.5"} and ${no2?.percent_difference != null ? `${signed(no2.percent_difference)}% NO2` : "higher NO2"} in ${year ?? "2024"}.`,
+        `Using the land-use contrasts from Badia et al. 2025, monitors with the most built-up land nearby had ${pm25?.percent_difference != null ? `${signed(pm25.percent_difference)}% PM2.5` : "higher PM2.5"} and ${no2?.percent_difference != null ? `${signed(no2.percent_difference)}% NO2` : "higher NO2"} in ${year ?? "2024"}.`,
         "NO2 comes mostly from traffic, so the larger NO2 difference fits the idea that built-up land brings traffic emissions with it.",
       ];
     },

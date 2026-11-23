@@ -15,6 +15,7 @@ from app.db.session import SessionLocal, get_engine
 from app.geospatial.crs import length_m, to_projected
 from app.geospatial.grid import generate_grid
 from app.geospatial.idw import inverse_distance_weight
+from app.ingestion.grid_cpcb import apply_cpcb_grid_concentrations, cpcb_pm25_path
 from app.ingestion.sample_observations import generate_sample_observations
 from app.models.catalog import DatasetCatalog, RasterAsset
 from app.models.city import City
@@ -166,6 +167,8 @@ def seed_air_quality(db, city: City) -> None:
     )
     if already:
         return
+    if cpcb_pm25_path() is not None and city.slug == "delhi":
+        return
     area = _city_area(city)
     stations_cfg = area.data.get("stations") or []
     if not stations_cfg:
@@ -308,6 +311,7 @@ def seed_rasters_and_metrics(db, city: City) -> None:
 
     period_start = date.fromisoformat(area.date_start)
     period_end = date.fromisoformat(area.date_end)
+    use_sample_concentrations = cpcb_pm25_path() is None or city.slug != "delhi"
     observed_points: list[tuple[float, float, float]] = []
     metrics_by_cell: dict[str, GridEnvironmentalMetric] = {}
 
@@ -393,7 +397,7 @@ def seed_rasters_and_metrics(db, city: City) -> None:
         obs_count = 0
         mean_conc = None
         median_conc = None
-        if station_stats:
+        if station_stats and use_sample_concentrations:
             dists = []
             for station in station_stats:
                 dists.append(centroid_proj.distance(station["proj"]))
@@ -439,7 +443,7 @@ def seed_rasters_and_metrics(db, city: City) -> None:
 
     db.flush()
     min_stations = area.hotspot_min_stations
-    if len(observed_points) >= min_stations:
+    if use_sample_concentrations and len(observed_points) >= min_stations:
         for cell in cells:
             metric = metrics_by_cell[cell.id]
             if metric.observation_count:
@@ -614,7 +618,8 @@ def run_seed() -> None:
         seed_air_quality(db, city)
         seed_rasters_and_metrics(db, city)
         seed_catalog(db, city)
-        print(f"Seed complete for {city.name} ({city.slug})")
+        grid_update = apply_cpcb_grid_concentrations(db, city)
+        print(f"Seed complete for {city.name} ({city.slug}); grid {grid_update.get('status')}")
     finally:
         db.close()
 

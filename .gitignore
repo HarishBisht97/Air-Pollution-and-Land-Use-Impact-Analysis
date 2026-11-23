@@ -46,3 +46,5 @@ postgres_data/
 # Logs
 *.log
 logs/
+
+cpcb_data_2025_2026

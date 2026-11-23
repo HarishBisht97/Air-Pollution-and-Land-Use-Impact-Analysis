@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Understanding the Delhi air and land-use platform</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 16mm 18mm 16mm;
+    @top-left {
+      content: "GNR 605";
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      letter-spacing: 0.08em;
+      color: #6b6560;
+    }
+    @top-right {
+      content: "Delhi air and land use";
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #6b6560;
+    }
+    @bottom-left {
+      content: "Project and infrastructure guide";
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #6b6560;
+    }
+    @bottom-right {
+      content: counter(page);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #6b6560;
+    }
+  }
+  @page:first {
+    margin: 0;
+    @top-left { content: none; }
+    @top-right { content: none; }
+    @bottom-left { content: none; }
+    @bottom-right { content: none; }
+  }
+  * { box-sizing: border-box; }
+  html { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body {
+    margin: 0;
+    color: #1c1917;
+    font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+  h1, h2, h3, h4 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 600;
+    line-height: 1.2;
+    page-break-after: avoid;
+  }
+  h1 { font-size: 18pt; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 13.5pt; margin: 18px 0 6px; color: #1c1917; }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; }
+  p { margin: 0 0 8px; orphans: 3; widows: 3; }
+  a { color: inherit; text-decoration: none; }
+  code, .mono {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+  }
+  .cover {
+    min-height: 297mm;
+    padding: 28mm 22mm 22mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #f4f1ea;
+    page-break-after: always;
+  }
+  .kicker {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #3f6212;
+    margin: 0 0 18px;
+  }
+  .cover h1 {
+    font-size: 34pt;
+    font-weight: 560;
+    letter-spacing: -0.02em;
+    max-width: 15ch;
+    margin: 0 0 16px;
+  }
+  .deck {
+    font-size: 13.5pt;
+    max-width: 38em;
+    color: #292524;
+  }
+  .cover-meta {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    color: #44403c;
+    border-top: 1px solid #1c1917;
+    padding-top: 12px;
+  }
+  .cover-meta div { margin: 2px 0; }
+  section { page-break-inside: auto; }
+  .part {
+    page-break-before: always;
+  }
+  .part:first-of-type { page-break-before: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8.7pt;
+    line-height: 1.35;
+    page-break-inside: auto;
+  }
+  tr { page-break-inside: avoid; }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 5px 7px;
+    border-bottom: 1px solid #e7e5e4;
+  }
+  th {
+    font-weight: 600;
+    border-bottom: 1.5px solid #1c1917;
+    background: #f5f5f4;
+  }
+  ul, ol { margin: 4px 0 10px; padding-left: 1.15em; }
+  li { margin: 0 0 3px; }
+  .note, .rule {
+    border-left: 3px solid #3f6212;
+    background: #f7f6f2;
+    padding: 8px 12px;
+    margin: 10px 0 12px;
+    page-break-inside: avoid;
+  }
+  .rule { border-left-color: #1c1917; }
+  .note strong, .rule strong {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .toc {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+  }
+  .toc ol { padding-left: 2.1em; }
+  .toc li { margin: 4px 0; }
+  .flow {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 8.4pt;
+    line-height: 1.45;
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    padding: 10px 12px;
+    white-space: pre;
+    page-break-inside: avoid;
+  }
+  .small { font-size: 9.5pt; color: #44403c; }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div>
+    <p class="kicker">GNR 605 · Study guide</p>
+    <h1>Understanding the Delhi air and land-use platform</h1>
+    <p class="deck">What the project asks, how a number is allowed to appear on a map, and how the React, FastAPI, and PostGIS pieces fit together.</p>
+  </div>
+  <div class="cover-meta">
+    <div>Air Pollution and Land Use Impact Analysis</div>
+    <div>Study area: NCT of Delhi, India</div>
+    <div>23 November 2026</div>
+    <div class="small" style="margin-top:8px;">Written from the repository: architecture, schema, city config, and analysis code. Live AQI totals are computed when the API runs and are not copied into this guide.</div>
+  </div>
+</header>
+
+<section>
+  <p class="kicker">Contents</p>
+  <h1>How to use this guide</h1>
+  <p>Read Part I if you need to explain the science. Read Part II if you need to explain the software. Part III is the path from a file on disk to a page in the browser. Part IV is what to say, and what to leave unsaid, when someone asks whether a map cell is a measurement.</p>
+  <nav class="toc">
+    <ol>
+      <li>The project in one page</li>
+      <li>The question and the study design</li>
+      <li>What kind of number you are looking at</li>
+      <li>Sample data and research data</li>
+      <li>The three running services</li>
+      <li>From the browser to a stored result</li>
+      <li>The database</li>
+      <li>Files, ingestion, and scripts</li>
+      <li>Measurement: coordinates, grid, buffers, interpolation</li>
+      <li>Satellite indices and land cover</li>
+      <li>Statistics the API will compute</li>
+      <li>The built-up and AQI analysis</li>
+      <li>Neighbourhood questions at the monitors</li>
+      <li>The web application</li>
+      <li>Configuration, another city, and how to run it</li>
+      <li>Limits that belong in any explanation</li>
+    </ol>
+  </nav>
+</section>
+
+<section class="part">
+  <p class="kicker">Part I · The work</p>
+  <h1>1. The project in one page</h1>
+  <p>This repository is a research platform for the National Capital Territory of Delhi. It joins air-quality observations to land cover, vegetation, roads, and industry, and it reports associations. The language the interface is written in is “associated with,” “correlated with,” and “observed near.”</p>
+  <p>The first working path is: import observations, validate and store them, summarise them, serve them through a FastAPI, and show them on a map and a dashboard, with CSV and GeoJSON export. A second, fuller path reads CPCB and XKDR air-quality files, Dynamic World land-cover rasters, an OpenStreetMap extract, and a ward boundary, and answers a specific question about built-up surroundings and annual AQI.</p>
+  <p>The software is a modular monolith. One React application talks to one Python API. The API talks to PostgreSQL with PostGIS, and it reads large rasters from disk. There is no separate worker fleet and no user login. Version 1 is a local research tool.</p>
+  <div class="rule">
+    <strong>The rule that organises everything</strong>
+    <p>A concentration is attached to a place only when a monitoring station is there. A grid cell, a ward, or a coloured patch between stations stays unmeasured until an explicit method fills it, and that fill is labeled.</p>
+  </div>
+
+  <h1>2. The question and the study design</h1>
+  <p>The operational question is whether monitors sitting in more built-up surroundings also record worse air, and whether that local pattern is the same thing as the rise or fall of the citywide average. Delhi has been adding built-up land, mostly toward the edges, over the same years in which fuels, emission controls, and the 2020 lockdown moved the city mean. The platform keeps those two comparisons apart.</p>
+  <p>The city is described in <span class="mono">config/cities/delhi.yaml</span>. Coordinates used by the analysis are read from that file and from the data files, so a second city is a new YAML file plus a boundary, not a rewrite of the statistics.</p>
+  <table>
+    <thead><tr><th>Choice</th><th>Value</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Place</td><td>NCT of Delhi</td><td>Boundary used for citywide built-up area is the FAO GAUL 2015 Delhi polygon when that file is present. The seed boundary is an approximate envelope.</td></tr>
+      <tr><td>Config window</td><td>2000–2026</td><td>The YAML allows a long study window. Continuous PM2.5 CAAQMS does not cover 2000–2010. The built-up and AQI series that the presentation uses is 2018–2026.</td></tr>
+      <tr><td>Store coordinates</td><td>EPSG:4326</td><td>Longitude and latitude in PostGIS, with GiST indexes. This is for storage and maps.</td></tr>
+      <tr><td>Measure coordinates</td><td>EPSG:32643</td><td>UTM zone 43N. Distances, areas, buffers, and the grid are computed here. Area is never taken from degrees.</td></tr>
+      <tr><td>Grid</td><td>1000 m</td><td>Each cell can hold land-cover shares, indices, road density, and distances. Pollution is filled only if a monitor lies in the cell.</td></tr>
+      <tr><td>Buffers</td><td>100, 300, 500, 1000 m</td><td>A buffer describes the neighbourhood of a monitor, a road, an industrial site, or a park. It does not create a new pollution sample.</td></tr>
+      <tr><td>Pollutants in the city file</td><td>PM2.5, PM10, NO2, SO2, CO, O3</td><td>Compared with the embedded NAAQS 2009 table when the averaging period matches.</td></tr>
+      <tr><td>Hotspot gate</td><td>8 stations</td><td>Below this count the hotspot endpoint refuses. It will not draw a continuous pollution surface from a handful of sites and present it as measured.</td></tr>
+    </tbody>
+  </table>
+  <p>Research questions in the methodology notes are treated as hypotheses.</p>
+  <ul>
+    <li><strong>Spatial variation.</strong> Station summaries and time series. Citywide hotspot products stay off below eight stations.</li>
+    <li><strong>Land cover, vegetation, roads, industry.</strong> Grid metrics, plus neighbourhood descriptions around the stations that actually measured the air.</li>
+    <li><strong>Land-cover change.</strong> Class areas between years. WorldCover 2020 (v100) and 2021 (v200) use different algorithms, so the API records whether the classification scheme is comparable.</li>
+    <li><strong>Screening priority.</strong> Three numbers kept separate: severity from observed pollution, confidence from how complete the record is, and a weighted screening score. An unobserved cell is left unranked. The score is a screening index.</li>
+  </ul>
+
+  <h1>3. What kind of number you are looking at</h1>
+  <p>API payloads that are not raw observations carry <span class="mono">data_kind</span>. Reading that field is the fastest way to know what you are allowed to claim.</p>
+  <table>
+    <thead><tr><th>data_kind</th><th>Meaning in this project</th></tr></thead>
+    <tbody>
+      <tr><td>observed</td><td>A station reading or a station geometry taken from the imported record.</td></tr>
+      <tr><td>quality_controlled</td><td>A reading that has passed a quality flag. Invalid flags are left out of means such as the hotspot average.</td></tr>
+      <tr><td>aggregated</td><td>A mean, a time rollup, a class area, or a buffer polygon computed from stored features.</td></tr>
+      <tr><td>satellite_index</td><td>NDVI, NDBI, or NDWI from reflectance bands.</td></tr>
+      <tr><td>classified</td><td>A land-cover class map, such as Dynamic World or WorldCover.</td></tr>
+      <tr><td>statistical_estimate</td><td>An interpolation, a correlation, a z-score hotspot, or the built-up versus AQI comparison. The built-up and annual AQI payload uses this label.</td></tr>
+      <tr><td>model_prediction</td><td>A fitted line extended beyond the observed years, used when the built-up projection has enough years.</td></tr>
+      <tr><td>screening_score</td><td>The priority index. Severity and confidence stay beside it so a low score is not read as clean air.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <strong>How to say it</strong>
+    <p>A station dot is an observation. A colour between stations is an estimate. A SAMPLE row is a software fixture. Those three sentences cover most of the questions a reader will ask of a screenshot.</p>
+  </div>
+
+  <h1>4. Sample data and research data</h1>
+  <p>The repository can boot with no network credentials, and it can also answer the Delhi question from files under <span class="mono">data/raw</span>. Those are different paths. Mixing them is the mistake that makes a demo look like a finding.</p>
+  <h2>What the seed loads</h2>
+  <p>On API startup, <span class="mono">python -m app.workers.seed</span> runs after the database migration. It is idempotent and it labels generated observations and rasters as SAMPLE.</p>
+  <table>
+    <thead><tr><th>Seeded layer</th><th>What is real about it</th><th>What is a fixture</th></tr></thead>
+    <tbody>
+      <tr><td>Twelve CAAQMS sites</td><td>Directory coordinates: Alipur, Anand Vihar, Ashok Vihar, Aya Nagar, Bawana, Punjabi Bagh, R K Puram, DTU, IGI Airport (T3), Okhla Phase-2, Dwarka Sector 8, Mandir Marg. Agencies in the file are DPCC, IMD, or CPCB.</td><td>Monthly concentrations are a synthetic series tagged SAMPLE_CPCB_STYLE.</td></tr>
+      <tr><td>City polygon</td><td>A box in the Delhi bbox, enough to draw a study area.</td><td>An approximate NCT envelope, not a cadastral boundary. The note on the city row says so.</td></tr>
+      <tr><td>Roads, parks, industry, Yamuna</td><td>Names you would recognise: Ring Road, Outer Ring, GT Karnal, the Ridge, Lodhi Garden, Okhla, Bawana, the Yamuna.</td><td>Short sketched geometries, explicitly named SAMPLE. Local-question statistics do not read these sketches.</td></tr>
+      <tr><td>NDVI, NDBI, WorldCover-like rasters</td><td>Tiny GeoTIFFs so tiles and indices have something to open.</td><td>Tagged as sample rasters, not satellite scenes. <span class="mono">raster_assets.is_sample</span> defaults to true.</td></tr>
+    </tbody>
+  </table>
+  <p>With twelve stations the seed may also store an inverse-distance-weighted value on cells that contain no monitor. That value is a <span class="mono">statistical_estimate</span>. The observed mean stays on the station.</p>
+  <h2>What the research pages read</h2>
+  <p>The presentation, the built-up comparison, and the local questions read files, not the sample sketches.</p>
+  <ul>
+    <li><strong>Air, through 2024.</strong> XKDR daily JSON under <span class="mono">data/raw/xkdr_daily</span>, one file per pollutant and year. The annual index is computed in this project from those daily means.</li>
+    <li><strong>Air, 2025 and 2026.</strong> CPCB’s published hourly AQI, ingested from station workbooks into <span class="mono">data/processed/cpcb_aqi</span>. 2026 in the method text ends on 31 October, before the high-AQI winter months.</li>
+    <li><strong>Built-up land.</strong> A Dynamic World class GeoTIFF per year, <span class="mono">DynamicWorld_label_{year}_delhi.tif</span>. Class 6 is built area. The share is taken inside 1 km of each monitor, and the city total is the built area inside the boundary.</li>
+    <li><strong>Roads, parks, industry for the neighbourhood page.</strong> <span class="mono">data/raw/osm/delhi_overpass.json</span>.</li>
+    <li><strong>Wards and station class.</strong> <span class="mono">data/raw/wards/delhi_wards.geojson</span> and <span class="mono">data/raw/stations/cpcb_station_class.csv</span>. The class file joins CPCB station codes to a single DPCC category. Mixed, commercial, and hotspot labels are left unlabeled. In that table only Sonia Vihar and R K Puram are residential.</li>
+  </ul>
+  <p>Official CPCB observations are obtained by a person exporting CSV or XLSX from the CCR dashboard. The portal uses a captcha. This project does not scrape it. Optional live access, unused unless credentials are set, is OpenAQ, Copernicus Data Space, and Google Earth Engine.</p>
+</section>
+
+<section class="part">
+  <p class="kicker">Part II · The machine</p>
+  <h1>5. The three running services</h1>
+  <p><span class="mono">docker compose up --build</span> starts three containers. The API image is Python 3.12 with GDAL, GEOS, and PROJ, because rasterio and GeoPandas need them. The setup notes suggest about 8 GB of RAM for that image.</p>
+  <table>
+    <thead><tr><th>Service</th><th>Image or stack</th><th>Port on your machine</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>db</td><td>postgis/postgis:16-3.4</td><td>5433, mapped to 5432 inside the container</td><td>Database <span class="mono">air_land_use</span>, user <span class="mono">gis</span>. A named volume <span class="mono">postgres_data</span> keeps the data. Health check is <span class="mono">pg_isready</span>.</td></tr>
+      <tr><td>api</td><td>FastAPI 0.115 and Uvicorn</td><td>8000</td><td>REST API, OpenAPI at <span class="mono">/docs</span>, health at <span class="mono">/health</span>. Source, city config, data, and scripts are mounted into the container.</td></tr>
+      <tr><td>web</td><td>Vite 6 and React 18</td><td>5173</td><td>The interface. <span class="mono">VITE_API_BASE_URL</span> points at <span class="mono">http://localhost:8000/api/v1</span>.</td></tr>
+    </tbody>
+  </table>
+  <p>The API waits until Postgres is healthy. Its start command is one shell line: migrate, seed, then serve with reload.</p>
+  <div class="flow">alembic upgrade head
+python -m app.workers.seed
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload</div>
+  <p>A local run without Docker uses Python 3.12, Node 22, and PostgreSQL 16 with PostGIS, usually on port 5432. Copy <span class="mono">.env.example</span> to <span class="mono">.env</span>. Defaults are enough to boot. Optional variables are <span class="mono">OPENAQ_API_KEY</span>, <span class="mono">CDSE_CLIENT_ID</span>, <span class="mono">CDSE_CLIENT_SECRET</span>, <span class="mono">GEE_SERVICE_ACCOUNT</span>, and <span class="mono">GEE_PROJECT</span>. The stack starts when those are empty.</p>
+  <p>There is no Celery. A longer analysis inserts a row in <span class="mono">analysis_runs</span> with status queued, runs the function in the request, and stores completed or failed plus the output metadata. Raster work is the same pattern: a function in the API process, reading a GeoTIFF with rasterio.</p>
+  <h2>Libraries that do the actual work</h2>
+  <table>
+    <thead><tr><th>Layer</th><th>Libraries</th></tr></thead>
+    <tbody>
+      <tr><td>HTTP and data access</td><td>FastAPI, Uvicorn, Pydantic, SQLAlchemy 2, GeoAlchemy2, Alembic, psycopg 3</td></tr>
+      <tr><td>Geometry</td><td>Shapely, pyproj, GeoPandas</td></tr>
+      <tr><td>Rasters</td><td>rasterio, rasterstats, rioxarray, xarray, rio-tiler for PNG previews</td></tr>
+      <tr><td>Tables and models</td><td>pandas, NumPy, SciPy, statsmodels, scikit-learn</td></tr>
+      <tr><td>Spatial statistics</td><td>libpysal and esda, used for Moran’s I when weights are supplied</td></tr>
+      <tr><td>Optional imagery</td><td>earthengine-api, sentinelhub. Installed as extra dependency groups, not required to boot.</td></tr>
+      <tr><td>Browser</td><td>React 18, React Router 7, TanStack Query, Leaflet and React-Leaflet, Recharts, react-hook-form, Zod, Tailwind. Tests use Vitest.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>6. From the browser to a stored result</h1>
+  <p>The frontend calls <span class="mono">/api/v1</span>. CORS allows the Vite origin on port 5173 and also port 8080. A city filter is the query <span class="mono">?city=</span>. The default slug is <span class="mono">delhi</span>.</p>
+  <div class="flow">Browser page
+    Filter bar: city, pollutant, dates
+        |
+        |  HTTP  /api/v1/...
+        v
+FastAPI router
+    air quality | land cover | geospatial | analysis | ingestion | exports
+        |
+        +-- PostGIS query, geometries in EPSG:4326
+        +-- GeoTIFF window, class share or index
+        |
+        v
+JSON with data_kind, and often a run id
+        |
+        v
+Leaflet map, Recharts chart, or a CSV / GeoJSON download</div>
+  <p>Query guards live in settings: page size defaults to 100 and caps at 1000, a date range caps at <span class="mono">max_date_range_days</span> (10000 in the current settings and in Compose), and an export caps at 50000 rows.</p>
+  <h2>API surface</h2>
+  <p>Interactive documentation is <span class="mono">http://localhost:8000/docs</span>. The routers mounted in <span class="mono">backend/app/api/v1/router.py</span> are cities, datasets, air quality, land cover, analysis, ingestion, exports, rasters, geospatial, and dashboard. NAAQS is a separate route, <span class="mono">GET /api/v1/naaqs</span>.</p>
+  <table>
+    <thead><tr><th>Group</th><th>What you call</th><th>What comes back</th></tr></thead>
+    <tbody>
+      <tr><td>Cities</td><td>GET /cities, /cities/{id}, /cities/slug/current</td><td>The configured city, its boundary, and a coverage warning.</td></tr>
+      <tr><td>Air quality</td><td>GET /air-quality/stations, /observations, /summary, /timeseries, /spatial-distribution, /cpcb-aqi, /cpcb-snapshot</td><td>Station GeoJSON, paginated observations, means, and CPCB series.</td></tr>
+      <tr><td>Land cover</td><td>GET /land-cover/classes, /statistics, /change, /indices</td><td>Class areas, a year comparison with the scheme caveat, mean NDVI and NDBI.</td></tr>
+      <tr><td>Map layers</td><td>GET /grid, /roads, /green-spaces, /industrial, /water</td><td>GeoJSON. Industrial features carry the completeness note.</td></tr>
+      <tr><td>Analysis</td><td>POST /analysis/correlation, /regression, /hotspots, /buffers, /priority, /builtup-aqi</td><td>A statistic plus an analysis_runs row.</td></tr>
+      <tr><td>Analysis reads</td><td>GET /analysis/runs, /builtup-aqi-years, /builtup-projection, /local-questions, /delhi-land-use, /annual-aqi-surface/{year}, /scatter</td><td>The products behind the presentation and relationship pages. Several of these are computed for Delhi only.</td></tr>
+      <tr><td>Ingestion</td><td>POST /ingestion/air-quality/csv, /ingestion/spatial-file</td><td>A batch id. Poll the job route for status.</td></tr>
+      <tr><td>Exports and tiles</td><td>POST /exports, GET /rasters/{id}/tiles/{z}/{x}/{y}.png</td><td>A file job, or a PNG preview of a raster asset.</td></tr>
+    </tbody>
+  </table>
+  <h2>Where the Python is organised</h2>
+  <p><span class="mono">backend/app</span> is split by job, not by page.</p>
+  <table>
+    <thead><tr><th>Package</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>api/v1</td><td>HTTP. Thin handlers. They load a city, call a function, and attach data_kind and a run id.</td></tr>
+      <tr><td>analytics</td><td>Summary, correlation, OLS, change, coverage, priority, daily AQI, Delhi land-use contrasts, local questions, built-up years, concentration change, and the projection.</td></tr>
+      <tr><td>geospatial</td><td>CRS transforms, the 1 km grid, buffers, IDW, and AQI contour surfaces.</td></tr>
+      <tr><td>remote_sensing</td><td>NDVI, NDBI, NDWI, WorldCover class maps, Dynamic World shares, sample rasters, a local raster reader, and an optional Earth Engine client.</td></tr>
+      <tr><td>ingestion</td><td>CSV air quality, spatial files, timestamps, unit conversion, CPCB hourly workbooks, the CPCB snapshot, XKDR daily and monthly JSON, and the CPCB-to-grid join.</td></tr>
+      <tr><td>models</td><td>SQLAlchemy tables. One migration creates the whole PostGIS schema.</td></tr>
+      <tr><td>workers</td><td>The seed, and the small create_run / execute_run helpers.</td></tr>
+      <tr><td>core</td><td>Settings, logging, the NAAQS table, and loading a city YAML into a study area.</td></tr>
+    </tbody>
+  </table>
+
+  <h1>7. The database</h1>
+  <p>One Alembic revision, <span class="mono">0001_initial_postgis_schema</span>, creates the PostGIS extension and every table. Primary keys are UUIDs. Geometries are stored in SRID 4326. Time columns are timezone-aware.</p>
+  <p>The core relationships are: a city has many stations, a station has many observations, a city has many grid cells, a grid cell has environmental metrics and land-cover statistics, and a land-cover statistic points at a land-cover dataset. Analysis runs, model outputs, ingestion batches, the dataset catalog, raster assets, and export jobs sit beside that chain.</p>
+  <table>
+    <thead><tr><th>Table</th><th>What one row is</th></tr></thead>
+    <tbody>
+      <tr><td>cities</td><td>Slug, name, state, country, projected SRID, multipolygon boundary, and the YAML config copied into JSONB.</td></tr>
+      <tr><td>monitoring_stations</td><td>A point. Unique on city, external station id, and source, so the same CPCB code from two sources can coexist.</td></tr>
+      <tr><td>pollution_observations</td><td>One pollutant at one time. Stores concentration, unit, the original unit, the original timezone, quality flag, source, and data_kind. Unique on station, pollutant, time, and source.</td></tr>
+      <tr><td>ingestion_batches</td><td>One import. Counts of processed, inserted, skipped, and rejected rows, plus status and error text.</td></tr>
+      <tr><td>analysis_grid</td><td>A polygon cell, a grid code unique inside the city, area in square kilometres, and resolution in metres.</td></tr>
+      <tr><td>grid_environmental_metrics</td><td>One cell, one period, one pollutant. Means and medians, observation count, nearest station distance, NDVI, NDBI, NDWI, built-up and vegetation and water percentages, road density, distance to a major road, distance to industry.</td></tr>
+      <tr><td>land_cover_datasets</td><td>A named product: source, year, resolution, classification scheme.</td></tr>
+      <tr><td>land_cover_statistics</td><td>Area and percentage of one class inside one cell for one dataset.</td></tr>
+      <tr><td>dataset_catalog</td><td>Name, source URL, license, retrieval time, coverage, processing version.</td></tr>
+      <tr><td>raster_assets</td><td>A path on disk, bounds, resolution, CRS, year, and is_sample. The pixels stay in the file.</td></tr>
+      <tr><td>road_segments</td><td>A linestring, highway class, whether it is major, and length in metres.</td></tr>
+      <tr><td>industrial_sites</td><td>A geometry plus a fixed completeness note: absence of a mapped feature is not evidence that no industry exists.</td></tr>
+      <tr><td>green_spaces, water_bodies, administrative_areas</td><td>Parks and gardens, water, and ward or admin polygons.</td></tr>
+      <tr><td>analysis_runs</td><td>Type, parameters, status, start, end, error, and the JSON result.</td></tr>
+      <tr><td>statistical_model_outputs</td><td>A model type and data_kind hanging off a run.</td></tr>
+      <tr><td>export_jobs</td><td>Type, status, file path, row count.</td></tr>
+    </tbody>
+  </table>
+  <p>GiST indexes sit on the city boundary, station points, grid polygons, and each spatial layer. The environmental-metric row is unique on grid, period, and pollutant, so a recompute updates one cell-period rather than appending a silent duplicate.</p>
+</section>
+
+<section class="part">
+  <p class="kicker">Part III · From file to page</p>
+  <h1>8. Files, ingestion, and scripts</h1>
+  <p>Settings resolve <span class="mono">data/raw</span>, <span class="mono">data/interim</span>, <span class="mono">data/processed</span>, and <span class="mono">data/sample</span> relative to the repository, or to <span class="mono">/data</span> inside Docker. Large rasters are not loaded into Postgres. <span class="mono">raster_assets.file_path</span> points at them.</p>
+  <table>
+    <thead><tr><th>Place</th><th>Typical contents</th></tr></thead>
+    <tbody>
+      <tr><td>data/raw/xkdr_daily and monthly JSON</td><td>Station series used for daily means and for the 2024 neighbourhood questions.</td></tr>
+      <tr><td>data/raw/osm</td><td>Overpass extract and, when applied, the GAUL Delhi boundary.</td></tr>
+      <tr><td>data/raw/wards, data/raw/stations</td><td>Ward polygons and the residential-class table.</td></tr>
+      <tr><td>data/raw/dynamicworld, data/raw/worldcover</td><td>Annual class maps and ESA WorldCover tiles for 2020 and 2021.</td></tr>
+      <tr><td>data/processed/cpcb_aqi</td><td>Stations JSON, daily and monthly JSON, and gzipped hourly CSV by station id.</td></tr>
+      <tr><td>data/sample</td><td>Development fixtures only. The sample README and the raster tag say they are not measurements.</td></tr>
+      <tr><td>cpcb_data_2025_2026</td><td>Hourly AQI workbooks downloaded for individual stations, before the hourly ingest script folds them into the processed extract.</td></tr>
+    </tbody>
+  </table>
+  <h2>Scripts</h2>
+  <table>
+    <thead><tr><th>Script</th><th>When you use it</th></tr></thead>
+    <tbody>
+      <tr><td>scripts/ingest_air_quality.py</td><td>Load a CPCB-style CSV. Columns map to station id, pollutant, concentration, unit, time, latitude, and longitude. Example source label: CPCB_CAAQMS.</td></tr>
+      <tr><td>scripts/ingest_cpcb_hourly_aqi.py</td><td>Read hourly AQI workbooks into the processed daily, monthly, and station files.</td></tr>
+      <tr><td>scripts/ingest_spatial_data.py</td><td>Load a GeoJSON layer such as roads.</td></tr>
+      <tr><td>scripts/generate_analysis_grid.py</td><td>Build the 1 km grid for a city in the projected CRS, then store the cells in 4326.</td></tr>
+      <tr><td>scripts/process_satellite_imagery.py</td><td>Turn local bands or a WorldCover COG into indices and class statistics.</td></tr>
+      <tr><td>scripts/apply_real_data.py</td><td>Load WorldCover, Earth Engine indices, and OSM into PostGIS, and can replace the approximate boundary with the GAUL Delhi polygon. It expects the Earth Engine key and the raw files at the Docker data path.</td></tr>
+      <tr><td>scripts/run_analysis.py</td><td>Run a stored analysis from the command line.</td></tr>
+    </tbody>
+  </table>
+  <p>The same CSV and GeoJSON imports exist as multipart endpoints, so the Datasets page and the scripts share one ingestion code path. A batch records how many rows were inserted, skipped, or rejected. Units are converted, and timestamps are normalised, before the unique observation key is applied. A repeated import of the same station, pollutant, time, and source does not create a second row.</p>
+  <h2>Licenses to keep next to the data</h2>
+  <ul>
+    <li>CPCB observations: government public data, under the portal’s terms. Manual export only.</li>
+    <li>OpenStreetMap: ODbL. Attribute contributors.</li>
+    <li>Sentinel-2: Copernicus. Attribution is required.</li>
+    <li>ESA WorldCover: CC-BY 4.0.</li>
+    <li>Dynamic World: the class maps used for the built-up series. Cite the product when you quote a square kilometre.</li>
+    <li>Sample fixtures: development artifacts. They have no standing as measurements.</li>
+  </ul>
+
+  <h1>9. Measurement: coordinates, grid, buffers, interpolation</h1>
+  <p><span class="mono">app/geospatial/crs.py</span> is the gate. Anything that needs metres asks for the city’s projected SRID, which for Delhi is 32643. Buffer polygons are built in that CRS and can be stored or returned as GeoJSON in longitude and latitude. Area in square kilometres uses the projected geometry.</p>
+  <p>The grid generator cuts the city boundary into cells of <span class="mono">grid_resolution_m</span>, default 1000. Each cell gets a stable <span class="mono">grid_code</span>. Environmental metrics hang off the cell for a period. If no station falls in the cell, <span class="mono">observation_count</span> stays 0 and the concentration stays null. That null is the honest state. It is not a low reading.</p>
+  <p>Buffers accept a target of stations, roads, industrial sites, or green spaces, and a list of distances. The default list is the one in the city YAML. The response includes a limitation sentence: station buffers do not create extra samples; road and park completeness follow the extract; a missing industrial polygon is not proof of no industry.</p>
+  <p>Inverse distance weighting lives in <span class="mono">app/geospatial/idw.py</span>. Inputs are easting, northing, and a value. The power is 2. If the target is within 1 metre of a station, the function returns that station’s value. The README allows these fills on unmonitored cells only when the city has at least eight stations, and only with <span class="mono">data_kind=statistical_estimate</span>.</p>
+  <p>Contour and annual surfaces in <span class="mono">app/geospatial/contours.py</span> draw the coloured map between monitors. The presentation copy states the range used there: on the order of 32 to 39 stations with enough valid days, depending on the year. Those fills are estimates. The station symbols are the observations.</p>
+
+  <h1>10. Satellite indices and land cover</h1>
+  <p>The city file names Sentinel-2 L2A as the intended reflectance source, with a 20 percent cloud cap, baseline year 2020 and a recent year of 2024, and three indices.</p>
+  <ul>
+    <li>NDVI = (B8 − B4) / (B8 + B4). Near infrared minus red.</li>
+    <li>NDBI = (B11 − B8) / (B11 + B8), after the 20 m SWIR band is resampled to 10 m. This is the built-up index from bands, separate from the Dynamic World class.</li>
+    <li>NDWI = (B3 − B8) / (B3 + B8). Optional water index.</li>
+  </ul>
+  <p>On a real Sentinel-2 composite, scene classification classes 3, 8, 9, and 10 — cloud and shadow — should be masked before a mean index is taken. Without Copernicus or Earth Engine credentials, the seed writes the tiny sample GeoTIFFs instead, and the catalog marks them as sample.</p>
+  <p>WorldCover at 10 m is the intended default land-cover product for 2020 and 2021. Study classes collapse the product legend toward built-up, tree cover, grassland or sparse vegetation, cropland, bare soil, water, and other. Because v100 and v200 were produced with different algorithms, a drop in one class between those two years can be a method change. The change endpoint sets <span class="mono">comparable_classification_scheme</span> so the client can say so.</p>
+  <p>Dynamic World is the product behind the year-by-year built-up story. For a monitor, the code reads the class raster in a 1 km window and returns the share of class 6. For the city trend, it counts built pixels inside the boundary and converts them to square kilometres. Vegetation in the local questions uses classes 1, 2, and 5 in that same window.</p>
+
+  <h1>11. Statistics the API will compute</h1>
+  <p>Correlation takes two columns from the grid metric table, by default mean NDVI against mean concentration. It returns Pearson, with a Fisher-z confidence interval, and Spearman. The handler reminds the caller that pollution exists only on cells that contain a monitor, so the sample size is the number of monitored cells, and a single-station association is not a citywide law.</p>
+  <p>Regression is ordinary least squares through statsmodels. The default predictors are mean NDVI, built-up percentage, and road density. Diagnostics include VIF, RMSE, and MAE. Weather enters only when a weather column is one of the predictors. The response records that there is no holdout split in version 1, because observations share locations and a random row split would leak the same site into both sides.</p>
+  <p>Hotspots, for the database stations, are z-scores of mean PM2.5. A station is marked when z is at least 1. The method string on the result says this is not an interpolated surface and not Getis-Ord Gi*. If the station count is below <span class="mono">hotspot_min_stations</span>, the endpoint returns status <span class="mono">refused</span> and still writes the run, so the refusal is auditable. Moran’s I is implemented for a value vector and a spatial-weights matrix, for the case where the station count clears the same threshold the methodology asks for.</p>
+  <p>Priority scores each grid row with separate severity, confidence, and a weighted screening priority. Default weights can be replaced in the request body. The route returns at most 200 cells, labeled <span class="mono">screening_score</span>, with the note that the three components stay separate.</p>
+
+  <h1>12. The built-up and AQI analysis</h1>
+  <p>This is the analysis the presentation page is built on. The code is <span class="mono">app/analytics/builtup_aqi_years.py</span> together with <span class="mono">app/analytics/daily_aqi.py</span>. Years are 2018 through 2026. Each year is a cross-section. The citywide AQI trend is reported next to built-up growth and is not attributed to it.</p>
+  <h2>How an annual AQI is made, 2018–2024</h2>
+  <p>The label in code is “CPCB AQI from 24-hour PM2.5, PM10, NO2, SO2, and NH3.” CO and ozone are left out because CPCB indexes them on an 8-hour maximum, which a daily mean does not provide. A daily mean needs 16 or more hours. A station-day needs at least three of those pollutants, and one of them must be PM2.5 or PM10. The daily index is the maximum sub-index, using CPCB breakpoint tables stored in code. A station-year needs 180 or more valid days, then the annual value is the mean of those days.</p>
+  <h2>How 2025 and 2026 differ</h2>
+  <p>Those years use the mean of CPCB’s published hourly AQI, again requiring 16 or more hours in a day. A change in the series that crosses from 2024 into 2025 mixes a definition change with any real change. 2026 stops on 31 October, so November and December are absent, and those are high-AQI months. The payload marks a partial year.</p>
+  <h2>The comparison inside one year</h2>
+  <p>Monitors with a valid annual AQI are paired with their Dynamic World built-up share within 1 km. The year record then contains:</p>
+  <ul>
+    <li>Pearson r between built-up share and AQI, and its p-value.</li>
+    <li>An OLS slope, reported as AQI points per 10 percentage points of built-up share, and R².</li>
+    <li>A tercile contrast: the mean AQI of the third of monitors with the most built-up land nearby, minus the mean of the third with the least.</li>
+  </ul>
+  <p>The city trend row for that year is the mean of the station annual values, the station count, the built-up area inside the boundary, and the share of monitor-days at Poor or worse. The map can show the level in one year or the change between two years. Change classes run from −50 to +50 AQI so a colour means the same change on every pair of years. Level classes are also fixed, in steps of 10, so a colour means the same AQI in 2018 and in 2024.</p>
+  <p>The projection page fits a straight line through Dynamic World built area for every mapped year and draws a 95 percent interval. A city-mean AQI line on year is fit only for the concentration-based index, and only when at least eight such years exist. Hourly-index years stay out of that line. The within-year gap between more built-up and less built-up monitors is not converted into a future city average. When the fit succeeds, that payload is a <span class="mono">model_prediction</span>.</p>
+
+  <h1>13. Neighbourhood questions at the monitors</h1>
+  <p><span class="mono">app/analytics/local_questions.py</span> answers five questions at Delhi monitors. Concentrations stay on the monitor. Roads, industry, and parks are read from the Overpass file. Cells and polygons without a monitor stay unmeasured. The 2024 means used here are hour-weighted months from the XKDR extract: a month needs at least 336 hours, and a station needs at least six such months.</p>
+  <table>
+    <thead><tr><th>Question</th><th>Comparison</th><th>Geometry</th></tr></thead>
+    <tbody>
+      <tr><td>Vegetation</td><td>Terciles of PM2.5, NO2, and ozone by vegetation share</td><td>Dynamic World, 1 km square. Classes 1, 2, and 5.</td></tr>
+      <tr><td>Parks</td><td>Terciles of PM2.5 and NO2 by park area within 500 m</td><td>OSM leisure=park or garden, or landuse=grass.</td></tr>
+      <tr><td>Major roads</td><td>Spearman and OLS of NO2, and the same for PM2.5, on distance to a motorway, trunk, or primary road. Built-up share is in the OLS.</td><td>Length of those roads inside 300 m is also reported on the monitor.</td></tr>
+      <tr><td>Industry</td><td>Tercile and OLS of PM2.5 on industrial share, with built-up share in the OLS</td><td>OSM landuse=industrial inside the same 1 km square.</td></tr>
+      <tr><td>Residential rank</td><td>Residential-class monitors ordered by the 2024 PM2.5 mean, named with the containing ward</td><td>The class CSV and the ward GeoJSON. Ward name may be name, ward_name, or Ward_Name.</td></tr>
+    </tbody>
+  </table>
+  <p>The park contrast is withheld when fewer than three monitors in the high-park group have a park within 500 m. The industrial contrast is withheld when fewer than three monitors have any mapped industrial land within 1 km. In that case the vegetation tercile remains the green-space result. Population is not in these models. Distances and areas use EPSG:32643.</p>
+  <p>A related land-use page follows the Badia et al. (2025) contrast: monitors with the most of a land cover within 1 km against monitors with the least, reported as a percent difference for pollutants such as PM2.5 and NO2.</p>
+</section>
+
+<section class="part">
+  <p class="kicker">Part IV · Using it and explaining it</p>
+  <h1>14. The web application</h1>
+  <p>The shell is one header, a primary navigation, and a filter bar, then the page. Routes are declared in <span class="mono">frontend/src/App.tsx</span>. Data fetching goes through TanStack Query and <span class="mono">src/lib/api.ts</span>, which prefixes <span class="mono">VITE_API_BASE_URL</span>.</p>
+  <table>
+    <thead><tr><th>Route</th><th>Page</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>/</td><td>Dashboard</td><td>Stored indicators for the selected city and pollutant.</td></tr>
+      <tr><td>/map</td><td>Map explorer</td><td>Stations, grid, roads, parks, industry, water, and annual AQI layers.</td></tr>
+      <tr><td>/air-quality</td><td>Air quality</td><td>Series, summaries, and the CPCB snapshot.</td></tr>
+      <tr><td>/land-cover</td><td>Land cover</td><td>Class areas, change, and indices.</td></tr>
+      <tr><td>/scenarios</td><td>Land use contrasts</td><td>Most versus least of a cover within 1 km.</td></tr>
+      <tr><td>/local-questions</td><td>Local questions</td><td>Vegetation, parks, roads, industry, and the residential rank.</td></tr>
+      <tr><td>/relationships</td><td>Relationships</td><td>Built-up share against AQI across years.</td></tr>
+      <tr><td>/projection</td><td>Built-up projection</td><td>The fitted line and its interval.</td></tr>
+      <tr><td>/priority</td><td>Priority</td><td>The screening scores.</td></tr>
+      <tr><td>/reports</td><td>Reports</td><td>Exports.</td></tr>
+      <tr><td>/datasets</td><td>Datasets</td><td>Catalog, licenses, and upload.</td></tr>
+      <tr><td>/methodology</td><td>Methodology</td><td>The rules in this guide, in the interface.</td></tr>
+      <tr><td>/presentation</td><td>Presentation</td><td>A short spoken sequence: question, urbanization, the built-up gap, the citywide twist, pollutant evidence, takeaway. Arrow keys move steps. The notes on that page read the live numbers.</td></tr>
+    </tbody>
+  </table>
+  <p>The map is Leaflet on OpenStreetMap tiles, with the city boundary as an outline. Built-up overlays and AQI surfaces are images or GeoJSON from the analysis routes. Charts are Recharts. Empty states are explicit when a series cannot be loaded, which is what you see if the API is down or a Delhi-only route is asked of another city.</p>
+
+  <h1>15. Configuration, another city, and how to run it</h1>
+  <p>City behaviour that should change between places lives in YAML: name, geographic and projected CRS, centroid, bounding box, boundary file, date window, baseline and recent year, grid resolution, buffer distances, pollutant list, the hotspot minimum, land-cover classes, the satellite collection, and the station list used by the seed. Delhi’s projected SRID is 32643. A city in another UTM zone changes that number in its own file. The analysis functions take the SRID from the loaded city.</p>
+  <p>To add a city: write <span class="mono">config/cities/&lt;slug&gt;.yaml</span>, provide a boundary, seed or ingest observations, and select the slug in the filter. Routes that are hard-wired to Delhi, including the built-up and AQI contours, return 404 for any other slug. That is deliberate. Those products name Delhi files.</p>
+  <h2>Commands</h2>
+  <div class="flow"># Docker
+cp .env.example .env
+docker compose up --build
+# Web   http://localhost:5173
+# API   http://localhost:8000/docs
+# Health http://localhost:8000/health
+
+# Tests
+cd backend && pytest
+cd frontend && npm test</div>
+  <p>Unit tests for indices, units, NAAQS, correlation, and CRS do not need a database. Tests that touch PostGIS expect <span class="mono">DATABASE_URL</span>. A failed seed is usually a volume mount: Compose must mount <span class="mono">./data</span> and <span class="mono">./config</span>.</p>
+  <h2>Repository map</h2>
+  <div class="flow">config/cities/delhi.yaml     city definition
+backend/app                 API, analytics, ingestion, models
+backend/alembic             the single PostGIS migration
+frontend/src                pages, map, charts
+data/raw                    research inputs
+data/processed              derived CPCB extracts
+data/sample                 labeled fixtures
+scripts                     import and grid jobs
+docs                        architecture, schema, methodology, this guide</div>
+  <p>Shorter companions already in <span class="mono">docs/</span> are <span class="mono">architecture.md</span>, <span class="mono">database_schema.md</span>, <span class="mono">data_sources.md</span>, <span class="mono">methodology.md</span>, <span class="mono">api_reference.md</span>, <span class="mono">setup_guide.md</span>, and <span class="mono">testing.md</span>. Where a sentence in those notes and a sentence in the code disagree, the code is the one this guide follows. One example: an older API note mentioned a 1825-day query cap; settings and Compose currently use 10000.</p>
+
+  <h1>16. Limits that belong in any explanation</h1>
+  <p>These are properties of the study, not gaps to apologise for. They are why the maps are labeled the way they are.</p>
+  <ul>
+    <li>The built-up gap is an observed association. Traffic, industry, and the choice of monitor sites come with built-up land and are not partialled out. Meteorology, season, topography, and population are named confounders and are not in the default regression.</li>
+    <li>The city mean can fall while the local built-up penalty stays. Emission controls, fuels, weather, and the 2020 lockdown are the things the caveat names for that citywide movement. The rebound after the lockdown is evidence about activity, not about land cover.</li>
+    <li>The surface between monitors is interpolated. Small patches are estimates.</li>
+    <li>Dynamic World labels shift from year to year. The comparisons use terciles and the multi-year pattern so that one wobbly year is not the result.</li>
+    <li>2025–2026 AQI is a different index from 2018–2024. Quote them as a break in the series.</li>
+    <li>2026 ends on 31 October.</li>
+    <li>OpenStreetMap industry and parks are incomplete. The database stores that sentence on industrial rows.</li>
+    <li>WorldCover year-to-year change can mix a new algorithm with a real change on the ground.</li>
+    <li>The seed’s monthly values, sketched roads, and tiny rasters are for booting the software.</li>
+    <li>There is no authentication, no weather covariate pipeline wired through the interface, and no live CPCB client. Those are listed as future work in the setup guide, alongside a validated land-cover classifier and vector tiles if a larger city outgrows GeoJSON.</li>
+  </ul>
+  <div class="rule">
+    <strong>A closing formulation</strong>
+    <p>The platform stores observations in PostGIS, measures distance and area in UTM, and labels every derived layer. For Delhi, from 2018 onward, monitors with more Dynamic World built-up land within 1 km have worse annual AQI in the years that clear the data rules, while the city mean over those years is a separate series. That is the sentence the infrastructure was built to support, and to keep from being said more strongly than the data allows.</p>
+  </div>
+  <p class="small">Source of the statements in this guide: the repository as of 23 November 2026, including <span class="mono">README.md</span>, <span class="mono">docs/architecture.md</span>, <span class="mono">docs/methodology.md</span>, <span class="mono">docs/database_schema.md</span>, <span class="mono">config/cities/delhi.yaml</span>, <span class="mono">docker-compose.yml</span>, the Alembic migration <span class="mono">0001</span>, and the analytics and API modules named above.</p>
+</section>
+
+</body>
+</html>

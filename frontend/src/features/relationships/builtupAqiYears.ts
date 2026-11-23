@@ -14,6 +14,7 @@ export type YearStatistics = {
   gap: number | null;
   most_built_share: number | null;
   least_built_share: number | null;
+  aqi_source?: string;
 };
 
 export type CityTrend = {
@@ -22,9 +23,25 @@ export type CityTrend = {
   mean_aqi: number | null;
   stations: number;
   poor_or_worse_share: number | null;
+  aqi_source?: string;
+  partial?: boolean;
+  coverage_end?: string | null;
 };
 
-export type StationYear = { aqi: number; category: string; days: number; poor_or_worse_days: number; built: number | null };
+export type StationYear = {
+  aqi: number;
+  category: string;
+  days: number;
+  poor_or_worse_days: number;
+  built: number | null;
+  coverage_note?: string | null;
+};
+
+export function partialYearNote(row: CityTrend | undefined): string | null {
+  if (!row?.partial) return null;
+  const end = row.coverage_end ?? "October";
+  return `${row.year} is partial, through ${end}. November and December are not included, so this is not a full-year AQI.`;
+}
 
 export type StationFeature = {
   type: "Feature";
@@ -89,6 +106,33 @@ export function useBuiltUpAqiYears(city: string) {
     queryFn: () => apiGet<BuiltUpAqiYears>("/analysis/builtup-aqi-years", { city }),
     enabled: city === "delhi",
     staleTime: Infinity,
+  });
+}
+
+export type AqiBands = {
+  type: "FeatureCollection";
+  features: { type: "Feature"; geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; properties: { min_aqi: number; max_aqi: number; fill: string; category?: string } }[];
+  mode: "level" | "change";
+  year: number;
+  base?: number;
+  stations: number;
+  improved?: number;
+  worsened?: number;
+  median_change?: number | null;
+  method: string;
+};
+
+export function useAnnualAqiBands(city: string, year: number | null, base: number | null, mode: "level" | "change") {
+  const change = mode === "change";
+  return useQuery({
+    queryKey: ["annual-aqi-bands", city, mode, change ? base : null, year],
+    queryFn: () =>
+      change
+        ? apiGet<AqiBands>(`/analysis/annual-aqi-change-bands/${year}`, { city, base })
+        : apiGet<AqiBands>(`/analysis/annual-aqi-bands/${year}`, { city }),
+    enabled: city === "delhi" && year != null && (!change || (base != null && base < year)),
+    staleTime: Infinity,
+    placeholderData: keepPreviousData,
   });
 }
 

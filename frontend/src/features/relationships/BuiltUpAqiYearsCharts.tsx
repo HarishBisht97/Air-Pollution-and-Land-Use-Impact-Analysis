@@ -10,8 +10,8 @@ function GapTooltip({ active, payload }: { active?: boolean; payload?: { payload
   return (
     <div className="rounded-md border border-stone-200 bg-white px-3 py-2 text-xs shadow-sm">
       <p className="font-medium">{row.year}</p>
-      <p>Most built-up third ({formatNumber(row.most_built_share, 0)}% built-up): AQI {formatNumber(row.most_built_aqi, 0)}</p>
-      <p>Least built-up third ({formatNumber(row.least_built_share, 0)}% built-up): AQI {formatNumber(row.least_built_aqi, 0)}</p>
+      <p>Most built-up nearby ({formatNumber(row.most_built_share, 0)}% built-up): AQI {formatNumber(row.most_built_aqi, 0)}</p>
+      <p>Least built-up nearby ({formatNumber(row.least_built_share, 0)}% built-up): AQI {formatNumber(row.least_built_aqi, 0)}</p>
       <p>Gap {formatNumber(row.gap, 0)} AQI · {row.n_each} stations each</p>
       <p>Pearson r = {formatNumber(row.pearson_r, 2)} (p={formatNumber(row.p_value, 3)}, n={row.n})</p>
       <p>{formatNumber(row.aqi_per_10_points, 1)} AQI per 10 points of built-up</p>
@@ -47,8 +47,8 @@ export function TercileGapChart({ years }: { years: YearStatistics[] }) {
         <YAxis width={52} domain={[0, "auto"]} label={{ value: "Mean annual AQI", angle: -90, position: "insideLeft", style: { ...AXIS_LABEL, textAnchor: "middle" } }} />
         <Tooltip content={<GapTooltip />} />
         <Legend verticalAlign="top" />
-        <Bar dataKey="most_built_aqi" name="Most built-up third" fill="#b91c1c" isAnimationActive={false} />
-        <Bar dataKey="least_built_aqi" name="Least built-up third" fill="#3f6b4a" isAnimationActive={false} />
+        <Bar dataKey="most_built_aqi" name="Most built-up nearby" fill="#b91c1c" isAnimationActive={false} />
+        <Bar dataKey="least_built_aqi" name="Least built-up nearby" fill="#3f6b4a" isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );

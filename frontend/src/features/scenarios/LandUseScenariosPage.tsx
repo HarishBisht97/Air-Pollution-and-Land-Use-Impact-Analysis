@@ -89,7 +89,7 @@ export function LandUseScenariosPage() {
           <LandUseContrastChart data={data} />
         </div>
         <p className="mt-2 text-xs text-stone-500">
-          X axis: pollutant. Y axis: percent difference between the highest third and the lowest third of that land cover within 1 km. A bar below zero means the high-share stations recorded a lower concentration.
+          X axis: pollutant. Y axis: how much higher the concentration was at monitors with the most of that land cover nearby, compared with monitors with the least. A bar below zero means the group with more of that land cover had lower pollution.
         </p>
       </Card>
       <div className="grid gap-3 lg:grid-cols-3">
@@ -100,8 +100,8 @@ export function LandUseScenariosPage() {
               <thead>
                 <tr className="text-left text-xs uppercase text-stone-500">
                   <th>Pollutant</th>
-                  <th>Low third</th>
-                  <th>High third</th>
+                  <th>Least nearby</th>
+                  <th>Most nearby</th>
                   <th>Change</th>
                 </tr>
               </thead>
@@ -118,7 +118,7 @@ export function LandUseScenariosPage() {
             </table>
             {contrast.pollutants[0]?.status === "ok" ? (
               <p className="mt-2 text-xs text-stone-500">
-                For {contrast.pollutants[0].pollutant}, {contrast.pollutants[0].n_each} stations in each third. Mean share of this land cover {formatNumber(contrast.pollutants[0].low_land_mean, 1)}% versus {formatNumber(contrast.pollutants[0].high_land_mean, 1)}%.
+                For {contrast.pollutants[0].pollutant}, {contrast.pollutants[0].n_each} stations in each group. Mean share of this land cover {formatNumber(contrast.pollutants[0].low_land_mean, 1)}% versus {formatNumber(contrast.pollutants[0].high_land_mean, 1)}%.
               </p>
             ) : null}
           </Card>

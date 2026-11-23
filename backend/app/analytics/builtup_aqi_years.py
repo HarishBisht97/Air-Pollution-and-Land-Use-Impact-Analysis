@@ -22,11 +22,18 @@ from app.analytics.delhi_land_use import tercile_contrast
 from app.analytics.regression import fit_ols
 from app.core.config import get_settings
 from app.geospatial.contours import change_breaks, change_colours, class_colours, fixed_breaks
+from app.ingestion.cpcb_hourly_aqi import (
+    COVERAGE_END,
+    SOURCE as CPCB_HOURLY_SOURCE,
+    hourly_station_years,
+    load_cpcb_stations,
+    year_labels,
+)
 from app.ingestion.xkdr_daily import SLUGS
 from app.ingestion.xkdr_monthly import SOURCE, STATIONS_FILE, load_stations
 from app.remote_sensing.dynamic_world import built_up_area_km2, built_up_shares
 
-YEARS = tuple(range(2018, 2025))
+YEARS = tuple(range(2018, 2027))
 BASELINE_YEAR = YEARS[0]
 BOUNDARY_FILE = Path("osm") / "delhi_boundary_gaul2015.geojson"
 CLASS_STEP = 10.0
@@ -37,7 +44,9 @@ CAVEAT = (
     "monitors with less. That gap is an observed association; traffic, industry, and station siting "
     "come with built-up land and are not separated out. The city-wide AQI trend follows emission "
     "controls, fuels, weather, and the 2020 lockdown, so it is shown next to built-up growth, "
-    "not explained by it."
+    "not explained by it. From 2025 the annual value is the mean of CPCB's published hourly AQI, "
+    "not the concentration-based index used through 2024, so a change across that break mixes a "
+    "definition change with any real change. 2026 ends on 31 October, before the high-AQI winter months."
 )
 
 
@@ -112,6 +121,39 @@ def change_samples(features: list[dict], base: int, year: int) -> list[tuple[flo
     ]
 
 
+def monitor_catalog(xkdr: list[dict], cpcb: list[dict]) -> list[dict]:
+    """XKDR monitors, plus CPCB stations from 2025–2026 that were not in that list."""
+    merged = []
+    seen: set[str] = set()
+    for station in xkdr:
+        longitude = station.get("longitude")
+        latitude = station.get("latitude")
+        if longitude is None or latitude is None:
+            continue
+        merged.append(
+            {
+                "station_id": station["station_id"],
+                "name": station["name"],
+                "longitude": float(longitude),
+                "latitude": float(latitude),
+            }
+        )
+        seen.add(station["station_id"])
+    for station in cpcb:
+        if station["station_id"] in seen or station.get("latitude") is None or station.get("longitude") is None:
+            continue
+        merged.append(
+            {
+                "station_id": station["station_id"],
+                "name": station["name"],
+                "longitude": float(station["longitude"]),
+                "latitude": float(station["latitude"]),
+            }
+        )
+        seen.add(station["station_id"])
+    return merged
+
+
 def load_boundary(raw: Path) -> BaseGeometry | None:
     path = raw / BOUNDARY_FILE
     if not path.exists():
@@ -125,30 +167,34 @@ def load_boundary(raw: Path) -> BaseGeometry | None:
 def delhi_builtup_aqi_years() -> dict[str, Any]:
     settings = get_settings()
     raw = settings.resolve_path(settings.raw_data_dir)
+    processed = settings.resolve_path(settings.processed_data_dir) / "cpcb_aqi"
     raster_dir = raw / "dynamicworld"
-    stations = load_stations(raw / STATIONS_FILE)
+    stations = monitor_catalog(load_stations(raw / STATIONS_FILE), load_cpcb_stations(processed))
     daily_dir = raw / "xkdr_daily"
     if not stations or not daily_dir.exists():
         return {"status": "missing_data", "years": list(YEARS)}
     boundary = load_boundary(raw)
-    points = [(station["longitude"], station["latitude"]) for station in stations]
     by_station: dict[str, dict[str, dict]] = {station["station_id"]: {} for station in stations}
     years = []
     city = []
     for year in YEARS:
+        labels = year_labels(year)
         raster = raster_dir / f"DynamicWorld_label_{year}_delhi.tif"
-        shares = built_up_shares(raster, points)
-        annual = annual_station_aqi(raw, year)
+        annual = hourly_station_years(processed, year) if labels["aqi_source"] == "cpcb_hourly_index" else annual_station_aqi(raw, year)
+        used = [station for station in stations if station["station_id"] in annual]
+        shares = built_up_shares(raster, [(station["longitude"], station["latitude"]) for station in used])
         rows = []
-        for station, built in zip(stations, shares, strict=True):
-            record = annual.get(station["station_id"])
-            if record is None:
-                continue
-            entry = {**record, "built": built}
+        for station, built in zip(used, shares, strict=True):
+            entry = {**annual[station["station_id"]], "built": built}
             by_station[station["station_id"]][str(year)] = entry
             rows.append(entry)
-        years.append({"year": year, **year_statistics(rows)})
-        city.append(city_trend_row(year, annual, built_up_area_km2(raster, boundary)))
+        years.append({"year": year, "aqi_source": labels["aqi_source"], **year_statistics(rows)})
+        mapped = {station["station_id"]: annual[station["station_id"]] for station in used}
+        trend = city_trend_row(year, mapped, built_up_area_km2(raster, boundary))
+        trend["aqi_source"] = labels["aqi_source"]
+        trend["partial"] = labels["partial"]
+        trend["coverage_end"] = labels["coverage_end"]
+        city.append(trend)
     features = [
         {
             "type": "Feature",
@@ -174,12 +220,17 @@ def delhi_builtup_aqi_years() -> dict[str, Any]:
         "features": features,
         "aqi_classes": classes,
         "change_classes": change_classes(),
-        "aqi_method": f"{LABEL}. Daily means need 16 or more hours; a station-year needs {MIN_DAYS} or more valid days.",
+        "aqi_method": (
+            f"{LABEL}. Daily means need 16 or more hours; a station-year needs {MIN_DAYS} or more valid days. "
+            "Years 2018–2024 use that concentration-based daily AQI. "
+            "2025 and 2026 use the mean of CPCB's published hourly AQI index, also with 16 or more hours in a day. "
+            f"2026 runs through {COVERAGE_END}, so November and December are not included."
+        ),
         "pollutants": [name for name in SLUGS if name not in ("CO", "O3")],
         "radius_km": 1,
         "boundary": "FAO GAUL 2015 Delhi boundary" if boundary is not None else None,
         "land_cover": "Dynamic World class map (class 6, built area)",
-        "air_quality": f"{SOURCE}, daily means",
+        "air_quality": f"{SOURCE}, daily means through 2024; {CPCB_HOURLY_SOURCE} for 2025–2026",
         "caveat": CAVEAT,
         "data_kind": "statistical_estimate",
     }

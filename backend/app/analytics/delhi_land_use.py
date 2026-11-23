@@ -11,10 +11,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 
-import rasterio
-
 from app.core.config import get_settings
-from app.remote_sensing.dynamic_world import shares_in_dataset
 
 YEAR = 2024
 MIN_HOURS = 336
@@ -101,6 +98,10 @@ def delhi_land_use_contrasts() -> dict:
     stations_path = raw / "xkdr_delhi_stations.json"
     if not raster.exists() or not stations_path.exists():
         return {"status": "missing_data", "year": YEAR}
+    import rasterio
+
+    from app.remote_sensing.dynamic_world import shares_in_dataset
+
     stations = json.loads(stations_path.read_text())["data"]
     records = []
     with rasterio.open(raster) as dataset:
@@ -153,9 +154,9 @@ def delhi_land_use_contrasts() -> dict:
         "land_cover": f"Dynamic World class map, {YEAR}",
         "air_quality": SOURCE,
         "note": (
-            "Each contrast compares Delhi monitors in the highest third of that land cover "
-            "within 1 km with monitors in the lowest third. A positive percent means the "
-            "high-share stations had a higher 2024 mean. Weather and emissions were not held fixed. "
+            "Monitors are split into three equal groups by how much of that land cover is within 1 km. "
+            "A positive percent means the group with the most of it nearby had a higher 2024 mean than the group with the least. "
+            "Weather and emissions were not held fixed. "
             "Ammonia and secondary organic aerosol are not in this Delhi extract."
         ),
         "contrasts": contrasts,

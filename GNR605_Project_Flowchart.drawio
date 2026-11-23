@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-11-23T04:40:00.000Z" agent="GNR605" version="24.7.17" type="device">
+  <diagram id="gnr605-project-flow" name="Project flowchart">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="2740" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;GNR 605 · Delhi air quality and land use&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=22;fontStyle=1;fontColor=#1c1917;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1720" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="sub" value="Project flowchart. A concentration is attached to a place only when a monitoring station is there." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=13;fontColor=#57534e;" vertex="1" parent="1">
+          <mxGeometry x="40" y="56" width="1720" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_start" value="&lt;b&gt;Start&lt;/b&gt;&lt;br&gt;Study question for NCT of Delhi" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;ellipse;fillColor=#3f6212;strokeColor=#365314;fontColor=#ffffff;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="660" y="100" width="480" height="68" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_city" value="&lt;b&gt;Read the city definition&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;config/cities/delhi.yaml · store EPSG:4326 · measure UTM 43N (EPSG:32643)&lt;br&gt;1 km grid · buffers 100, 300, 500 and 1000 m · PM2.5, PM10, NO2, SO2, CO, O3&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="600" y="208" width="600" height="84" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_path" value="Which inputs?" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;fillColor=#f4f1ea;strokeColor=#3f6212;fontColor=#1c1917;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="740" y="332" width="320" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_sample" value="&lt;b&gt;Sample path&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Seed on API start. Twelve CAAQMS coordinates, a synthetic monthly series, sketched roads and parks, and tiny GeoTIFFs. Every fixture is labeled SAMPLE.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#fef3c7;strokeColor=#a16207;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="480" height="112" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_research" value="&lt;b&gt;Research path&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;XKDR daily JSON, 2018–2024 · CPCB hourly AQI, 2025–2026&lt;br&gt;Dynamic World class raster for each year · OSM Overpass&lt;br&gt;Wards and station class, under data/raw. The portal is not scraped.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ecfccb;strokeColor=#3f6212;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="488" width="480" height="124" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_ingest" value="&lt;b&gt;Ingest and validate&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Scripts and the Datasets page share one path. Units are converted and timestamps normalised.&lt;br&gt;Unique key: station, pollutant, time, and source. A repeat import does not add a second row.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="560" y="680" width="680" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_db" value="&lt;b&gt;PostGIS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Cities, stations, observations, the 1 km grid, metrics, land cover, and analysis runs. Geometries stored in EPSG:4326.&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fillColor=#f5f5f4;strokeColor=#57534e;fontColor=#1c1917;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="180" y="830" width="440" height="124" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_files" value="&lt;b&gt;Rasters on disk&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;GeoTIFF and COG stay in files. raster_assets stores the path, bounds, year, and is_sample. Pixels are not loaded into Postgres.&lt;/font&gt;" style="shape=document;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fillColor=#f5f5f4;strokeColor=#57534e;fontColor=#1c1917;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="830" width="440" height="124" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_monitor" value="Is there a monitor at this place?" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;fillColor=#f4f1ea;strokeColor=#3f6212;fontColor=#1c1917;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="720" y="1024" width="360" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_obs" value="&lt;b&gt;Attach the observation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;The concentration stays on the station. data_kind is observed, or quality_controlled when the quality flag is valid.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1044" width="430" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_null" value="&lt;b&gt;Leave the concentration null&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;No monitor means the place is unmeasured. A null is not a low reading.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#fafaf9;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="1044" width="430" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_fill" value="Eight or more stations in the city?" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=13;align=center;verticalAlign=middle;fillColor=#f4f1ea;strokeColor=#3f6212;fontColor=#1c1917;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="760" y="1360" width="340" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_idw" value="&lt;b&gt;Optional fill, labeled estimate&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Inverse distance weighting, power 2, or an annual contour between monitors. data_kind is statistical_estimate. The station value is kept.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffedd5;strokeColor=#c2410c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="280" y="1570" width="460" height="116" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_refuse" value="&lt;b&gt;Do not draw a pollution surface&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;The hotspot route returns refused and still records the run. Cells without a monitor stay empty.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#fafaf9;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="1576" width="460" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_compute" value="&lt;b&gt;Compute the labeled products&lt;/b&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="490" y="1748" width="820" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_aqi" value="&lt;b&gt;Annual AQI at the monitors&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;2018–2024: CPCB sub-index from daily means of PM2.5, PM10, NO2, SO2, and NH3. A day needs 16 hours. A station-year needs 180 valid days.&lt;br&gt;2025–2026 uses the mean of published hourly AQI. 2026 ends 31 October. The join is a break in the series.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f7fee7;strokeColor=#3f6212;strokeWidth=1.25;arcSize=8;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1852" width="420" height="188" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_built" value="&lt;b&gt;Built-up surroundings&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Dynamic World class 6 inside 1 km of each monitor. Within one year: Pearson r, an OLS slope, and the tercile gap.&lt;br&gt;The citywide mean AQI and the built-up area inside the boundary are reported beside that gap.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f7fee7;strokeColor=#3f6212;strokeWidth=1.25;arcSize=8;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="470" y="1852" width="420" height="188" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_local" value="&lt;b&gt;Neighbourhood questions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Vegetation, parks within 500 m, distance to a major road, mapped industry, and residential rank. Areas and distances use UTM 43N.&lt;br&gt;A contrast is withheld when fewer than three monitors qualify.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f7fee7;strokeColor=#3f6212;strokeWidth=1.25;arcSize=8;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="910" y="1852" width="420" height="188" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_other" value="&lt;b&gt;Grid statistics and projection&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Correlation and OLS use monitored cells only. Land-cover change records whether the two years share a classification scheme.&lt;br&gt;Priority keeps severity, confidence, and the screening score apart. A line past the observed years is a model prediction.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f7fee7;strokeColor=#3f6212;strokeWidth=1.25;arcSize=8;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1852" width="420" height="188" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_kind" value="&lt;b&gt;Attach data_kind to every derived payload&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;observed · quality_controlled · aggregated · satellite_index · classified · statistical_estimate · model_prediction · screening_score&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f4f1ea;strokeColor=#1c1917;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="400" y="2088" width="1000" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_api" value="&lt;b&gt;FastAPI /api/v1&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#d6d3d1&quot;&gt;Returns JSON and an analysis run id. Routes written for Delhi answer 404 for any other city.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#1c1917;strokeColor=#1c1917;fontColor=#fafaf9;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="560" y="2200" width="680" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_ui" value="&lt;b&gt;React application&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;Filters for city, pollutant, and dates. Leaflet map and Recharts. Pages for relationships, local questions, projection, priority, and CSV or GeoJSON export.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#ffffff;strokeColor=#44403c;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="500" y="2310" width="800" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_claim" value="&lt;b&gt;Read the mark before the colour&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;color:#44403c&quot;&gt;A station symbol is an observation. Colour between stations is an estimate. A SAMPLE tag is a software fixture.&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;fillColor=#f4f1ea;strokeColor=#1c1917;strokeWidth=1.25;" vertex="1" parent="1">
+          <mxGeometry x="500" y="2430" width="800" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_end" value="&lt;b&gt;End · report the association&lt;/b&gt;&lt;br&gt;The local built-up gap and the citywide mean stay separate series." style="whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;fontColor=#1c1917;rounded=1;arcSize=8;ellipse;fillColor=#3f6212;strokeColor=#365314;fontColor=#ffffff;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="530" y="2542" width="740" height="72" as="geometry"/>
+        </mxCell>
+        <mxCell id="foot" value="Air pollution and land-use impact analysis · NCT of Delhi · React, FastAPI, and PostGIS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=11;fontColor=#78716c;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2636" width="1720" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_start" target="n_city">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_city" target="n_path">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="Sample" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_path" target="n_sample">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="280" y="397"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="Research files" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_path" target="n_research">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1520" y="397"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.12;entryY=0;" edge="1" parent="1" source="n_sample" target="n_ingest">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="280" y="652"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.88;entryY=0;" edge="1" parent="1" source="n_research" target="n_ingest">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1520" y="652"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.22;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_ingest" target="n_db">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="400" y="804"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.78;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_ingest" target="n_files">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1400" y="804"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.22;entryY=0;" edge="1" parent="1" source="n_db" target="n_monitor">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="400" y="990"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.78;entryY=0;" edge="1" parent="1" source="n_files" target="n_monitor">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1400" y="990"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="n_monitor" target="n_obs">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="n_monitor" target="n_null">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="Unmonitored cell" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="n_null" target="n_fill">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1545" y="1440"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.25;exitY=0.75;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_fill" target="n_idw">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="510" y="1480"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e15" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.75;exitY=0.75;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_fill" target="n_refuse">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1350" y="1480"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e16" value="Station value" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.25;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="n_obs" target="n_compute">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="148" y="1774"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="e17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.2;entryY=0;" edge="1" parent="1" source="n_idw" target="n_compute">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.35;exitY=1;entryX=0.85;entryY=0;" edge="1" parent="1" source="n_refuse" target="n_compute">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.08;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_compute" target="n_aqi">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.36;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_compute" target="n_built">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.64;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_compute" target="n_local">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.92;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_compute" target="n_other">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.1;entryY=0;" edge="1" parent="1" source="n_aqi" target="n_kind">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.36;entryY=0;" edge="1" parent="1" source="n_built" target="n_kind">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.64;entryY=0;" edge="1" parent="1" source="n_local" target="n_kind">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.9;entryY=0;" edge="1" parent="1" source="n_other" target="n_kind">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_kind" target="n_api">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_api" target="n_ui">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_ui" target="n_claim">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+        <mxCell id="e30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#44403c;fontSize=11;fontFamily=Helvetica;fontColor=#1c1917;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="n_claim" target="n_end">
+          <mxGeometry relative="1" as="geometry"></mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -20,6 +20,8 @@ def pearson_with_ci(x: np.ndarray, y: np.ndarray, alpha: float = 0.05) -> dict[s
     if n < 3:
         return {"coefficient": None, "p_value": None, "ci_low": None, "ci_high": None, "n": n}
     r, p = stats.pearsonr(x, y)
+    if n == 3 or abs(r) >= 1:
+        return {"coefficient": float(r), "p_value": float(p), "ci_low": None, "ci_high": None, "n": n}
     # Fisher z confidence interval
     z = np.arctanh(r)
     se = 1 / math.sqrt(n - 3)

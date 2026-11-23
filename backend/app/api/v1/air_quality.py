@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2.shape import to_shape
 from shapely.geometry import mapping
 from sqlalchemy import func, select
@@ -11,6 +11,7 @@ from app.analytics.coverage import coverage_warning_for_slug
 from app.analytics.summary import aggregate_by_period, compare_to_naaqs, summarize_values
 from app.api.deps import current_city, db_session
 from app.core.config import get_settings
+from app.ingestion.cpcb_hourly_aqi import query_series
 from app.ingestion.cpcb_snapshot import load_cpcb_snapshot
 from app.ingestion.xkdr_monthly import (
     NOTE,
@@ -296,6 +297,37 @@ def timeseries(
         "naaqs": comparison,
         "data_kind": "aggregated",
     }
+
+
+@router.get("/cpcb-aqi")
+def cpcb_aqi(
+    city: City = Depends(current_city),
+    station_id: str | None = None,
+    start: date | None = None,
+    end: date | None = None,
+    aggregation: str = Query(default="day", pattern="^(hour|day|month)$"),
+    offset: int = 0,
+    limit: int | None = None,
+):
+    """Hourly, daily, or monthly CPCB AQI index from the 2025–2026 station workbooks."""
+    if city.slug != "delhi":
+        raise HTTPException(404, "CPCB hourly AQI is loaded for Delhi only.")
+    if offset < 0:
+        raise HTTPException(400, "offset must be >= 0")
+    start, end = validate_date_range(start, end)
+    settings = get_settings()
+    root = settings.resolve_path(settings.processed_data_dir) / "cpcb_aqi"
+    if not (root / "daily.json").exists():
+        raise HTTPException(404, "CPCB hourly AQI extract is not built. Run scripts/ingest_cpcb_hourly_aqi.py.")
+    return query_series(
+        root,
+        station_id=station_id,
+        start=start,
+        end=end,
+        aggregation=aggregation,
+        offset=offset,
+        limit=clamp_limit(1000 if limit is None else limit),
+    )
 
 
 @router.get("/cpcb-snapshot")

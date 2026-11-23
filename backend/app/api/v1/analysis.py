@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 import pandas as pd
 
 from app.analytics.builtup_aqi_years import BASELINE_YEAR, YEARS, change_samples, delhi_builtup_aqi_years, load_boundary, year_samples
+from app.analytics.builtup_projection import project_builtup_aqi
 from app.analytics.builtup_concentration_change import delhi_builtup_concentration_change
 from app.analytics.correlation import correlate
 from app.analytics.delhi_land_use import delhi_land_use_contrasts
+from app.analytics.local_questions import delhi_local_questions
 from app.analytics.esda import require_station_threshold, station_zscore_hotspots
 from app.analytics.priority import DEFAULT_WEIGHTS, score_cell
 from app.analytics.regression import builtup_aqi_effect, fit_ols
@@ -361,6 +363,21 @@ def builtup_concentration_change(city: City = Depends(current_city)):
     return result
 
 
+@router.get("/builtup-projection")
+def builtup_projection(city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The built-up projection is computed for Delhi")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi daily station files or Dynamic World files are missing")
+    projection = project_builtup_aqi(result["city_trend"])
+    projection["city"] = "Delhi"
+    projection["aqi_method"] = result.get("aqi_method")
+    projection["land_cover"] = result.get("land_cover")
+    projection["boundary"] = result.get("boundary")
+    return projection
+
+
 @router.get("/builtup-aqi-years")
 def builtup_aqi_years(city: City = Depends(current_city)):
     if city.slug != "delhi":
@@ -445,6 +462,76 @@ def _annual_aqi_change_surface(base: int, year: int, projected_crs: str) -> dict
     }
 
 
+def _band_method(kind: str) -> str:
+    shared = (
+        "Inverse-distance weighting (power 2) on a 1 km grid, drawn as eight filled bands from the lowest "
+        "value in green to the highest in dark red, and clipped to the Delhi boundary. This is the same "
+        "contouring as the 2026 station map. Values between monitors are estimates, not measurements."
+    )
+    if kind == "change":
+        return "Change in annual station AQI, " + shared
+    return "Annual station AQI, " + shared
+
+
+@lru_cache(maxsize=len(YEARS))
+def _annual_aqi_bands(year: int, projected_crs: str) -> dict:
+    result = delhi_builtup_aqi_years()
+    boundary = load_boundary(get_settings().resolve_path(get_settings().raw_data_dir))
+    samples = year_samples(result["features"], year)
+    contours = aqi_contours(samples, boundary, projected_crs)
+    return {**contours, "mode": "level", "year": year, "stations": len(samples), "method": _band_method("level")}
+
+
+@lru_cache(maxsize=64)
+def _annual_aqi_change_bands(base: int, year: int, projected_crs: str) -> dict:
+    result = delhi_builtup_aqi_years()
+    boundary = load_boundary(get_settings().resolve_path(get_settings().raw_data_dir))
+    samples = change_samples(result["features"], base, year)
+    contours = aqi_contours(samples, boundary, projected_crs)
+    changes = sorted(value for _, _, value in samples)
+    return {
+        **contours,
+        "mode": "change",
+        "base": base,
+        "year": year,
+        "stations": len(samples),
+        "improved": sum(1 for value in changes if value < 0),
+        "worsened": sum(1 for value in changes if value > 0),
+        "median_change": changes[len(changes) // 2] if changes else None,
+        "method": _band_method("change"),
+    }
+
+
+@router.get("/annual-aqi-bands/{year}")
+def annual_aqi_bands(year: int, city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The annual AQI bands are computed for Delhi")
+    if year not in YEARS:
+        raise HTTPException(404, f"Annual AQI covers {YEARS[0]} to {YEARS[-1]}")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi daily station files are missing")
+    boundary = load_boundary(get_settings().resolve_path(get_settings().raw_data_dir))
+    if boundary is None:
+        raise HTTPException(404, "The Delhi boundary is missing")
+    return _annual_aqi_bands(year, f"EPSG:{city.projected_srid}")
+
+
+@router.get("/annual-aqi-change-bands/{year}")
+def annual_aqi_change_bands(year: int, base: int = BASELINE_YEAR, city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "The annual AQI bands are computed for Delhi")
+    if year not in YEARS or base not in YEARS or base >= year:
+        raise HTTPException(400, f"Pick a base year before the comparison year, both within {YEARS[0]} to {YEARS[-1]}")
+    result = delhi_builtup_aqi_years()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi daily station files are missing")
+    boundary = load_boundary(get_settings().resolve_path(get_settings().raw_data_dir))
+    if boundary is None:
+        raise HTTPException(404, "The Delhi boundary is missing")
+    return _annual_aqi_change_bands(base, year, f"EPSG:{city.projected_srid}")
+
+
 @router.get("/annual-aqi-surface/{year}")
 def annual_aqi_surface(year: int, city: City = Depends(current_city)):
     if city.slug != "delhi":
@@ -474,6 +561,16 @@ def delhi_land_use(city: City = Depends(current_city)):
     if city.slug != "delhi":
         raise HTTPException(404, "Land-use contrasts are computed for Delhi")
     result = delhi_land_use_contrasts()
+    if result.get("status") == "missing_data":
+        raise HTTPException(404, "Delhi Dynamic World or station files are missing")
+    return result
+
+
+@router.get("/local-questions")
+def local_questions(city: City = Depends(current_city)):
+    if city.slug != "delhi":
+        raise HTTPException(404, "Local questions are computed for Delhi")
+    result = delhi_local_questions()
     if result.get("status") == "missing_data":
         raise HTTPException(404, "Delhi Dynamic World or station files are missing")
     return result

@@ -78,15 +78,22 @@ def grid(
     features = []
     for cell, metric in rows:
         meta = (metric.data_quality_metadata if metric else None) or {}
-        assignment = meta.get("pollution_assignment", "station-in-cell only; no interpolation")
+        assignment = meta.get("pollution_assignment", "no CPCB monitor in this cell")
         data_kind = meta.get("data_kind", "aggregated")
+        concentration = float(metric.mean_concentration) if metric and metric.mean_concentration is not None else None
         props = {
             "id": cell.id,
             "grid_code": cell.grid_code,
             "area_sq_km": float(cell.area_sq_km),
             "resolution_m": cell.resolution_m,
+            "pollutant": metric.pollutant if metric else None,
             "observation_count": metric.observation_count if metric else 0,
-            "mean_concentration": float(metric.mean_concentration) if metric and metric.mean_concentration is not None else None,
+            "mean_concentration": concentration,
+            "unit": meta.get("unit"),
+            "coverage": meta.get("coverage"),
+            "station_names": meta.get("station_names") or [],
+            "pollution_source": meta.get("pollution_source"),
+            "is_sample": bool(meta.get("is_sample", False)),
             "mean_ndvi": float(metric.mean_ndvi) if metric and metric.mean_ndvi is not None else None,
             "mean_ndbi": float(metric.mean_ndbi) if metric and metric.mean_ndbi is not None else None,
             "built_up_percentage": float(metric.built_up_percentage) if metric and metric.built_up_percentage is not None else None,
@@ -97,4 +104,25 @@ def grid(
             "data_kind": data_kind,
         }
         features.append({"type": "Feature", "geometry": mapping(to_shape(cell.geometry)), "properties": props})
-    return {"type": "FeatureCollection", "features": features, "data_kind": "aggregated"}
+    measured = [feature for feature in features if feature["properties"]["mean_concentration"] is not None]
+    source = next((feature["properties"]["pollution_source"] for feature in measured if feature["properties"]["pollution_source"]), None)
+    starts = []
+    ends = []
+    for feature in measured:
+        coverage = feature["properties"]["coverage"]
+        if not coverage or " to " not in coverage:
+            continue
+        start, end = coverage.split(" to ", 1)
+        starts.append(start)
+        ends.append(end)
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "data_kind": "aggregated",
+        "is_sample": False if measured and all(not feature["properties"]["is_sample"] for feature in measured) else None,
+        "pollution_source": source,
+        "coverage": f"{min(starts)} to {max(ends)}" if starts else None,
+        "cells_with_monitor": len(measured),
+        "pollutant": "PM2.5" if measured else None,
+        "unit": "ug/m3" if measured else None,
+    }

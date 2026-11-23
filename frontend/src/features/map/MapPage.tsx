@@ -7,17 +7,18 @@ import { useFilters } from "@/hooks/useFilters";
 import { Alert, Card } from "@/components/ui/Card";
 import { DataKindBadge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
-import { AQI_COLORS, useAnnualAqiSurface, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
+import { AQI_COLORS, classFill, partialYearNote, useAnnualAqiBands, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
 import { StationChangeTable } from "@/features/map/StationChangeTable";
 import {
+  AnnualBandLayer,
   AnnualStationsLayer,
-  AqiFillLayer,
-  AqiLinesLayer,
   AqiPanes,
   BUILT_BASELINE,
   BUILT_NEW,
   BuiltUpOverlay,
+  CPCB_CATEGORY_COLORS,
   ClassList,
+  bandShades,
   type SurfaceMode,
   signed,
   useYearStations,
@@ -26,10 +27,10 @@ import {
 const AQI_MISSING = "#78716c";
 
 const GRID_BINS: { label: string; color: string; above: number }[] = [
-  { label: "Above 100 µg/m³", color: "#7c2d12", above: 100 },
-  { label: "Above 80 to 100 µg/m³", color: "#c2410c", above: 80 },
-  { label: "Above 60 to 80 µg/m³", color: "#ea580c", above: 60 },
-  { label: "60 µg/m³ or below", color: "#d97706", above: -Infinity },
+  { label: "Above 120 µg/m³", color: "#7c2d12", above: 120 },
+  { label: "Above 100 to 120 µg/m³", color: "#c2410c", above: 100 },
+  { label: "Above 80 to 100 µg/m³", color: "#ea580c", above: 80 },
+  { label: "80 µg/m³ or below", color: "#d97706", above: -Infinity },
 ];
 const GRID_EMPTY = "#e7e5e4";
 
@@ -83,9 +84,8 @@ export function MapPage() {
   const yearCity = builtUp.data?.city_trend.find((item) => item.year === selectedYear);
   const baseCity = builtUp.data?.city_trend.find((item) => item.year === base);
   const previousCity = builtUp.data?.city_trend.find((item) => selectedYear != null && item.year === selectedYear - 1);
-  const surface = useAnnualAqiSurface(filters.city, selectedYear, base, mode);
-  const classSet = mode === "change" ? builtUp.data?.change_classes : builtUp.data?.aqi_classes;
-  const classes = classSet?.classes ?? [];
+  const surface = useAnnualAqiBands(filters.city, selectedYear, base, mode);
+  const classes = bandShades(surface.data).map((shade) => ({ ...shade, label: `${shade.min_aqi}–${shade.max_aqi}`, category: "" }));
   const yearStations = useYearStations(builtUp.data, selectedYear, base, mode);
 
   const cityBounds = useMemo(() => {
@@ -122,15 +122,24 @@ export function MapPage() {
               <LayersControl.Overlay checked name="City boundary">
                 {city.data?.boundary ? <GeoJSON data={city.data.boundary} style={{ color: "#1c1917", weight: 2, fillOpacity: 0.04 }} /> : null}
               </LayersControl.Overlay>
-              <LayersControl.Overlay checked name="Interpolated AQI surface">
-                {surface.data ? <AqiFillLayer surface={surface.data} opacity={opacity} /> : null}
-              </LayersControl.Overlay>
-              <LayersControl.Overlay checked name="AQI contour lines">
-                {surface.data ? <AqiLinesLayer surface={surface.data} /> : null}
+              <LayersControl.Overlay checked name="AQI bands">
+                {surface.data ? <AnnualBandLayer bands={surface.data} fillOpacity={opacity} /> : null}
               </LayersControl.Overlay>
               <LayersControl.Overlay checked name="Annual AQI stations">
                 {yearStations && selectedYear != null ? (
-                  <AnnualStationsLayer stations={yearStations} classes={classes} year={selectedYear} base={base} mode={mode} method={builtUp.data?.aqi_method ?? ""} />
+                  <AnnualStationsLayer
+                    stations={yearStations}
+                    classes={classes}
+                    year={selectedYear}
+                    base={base}
+                    mode={mode}
+                    method={builtUp.data?.aqi_method ?? ""}
+                    fillFor={(properties) =>
+                      mode === "level"
+                        ? CPCB_CATEGORY_COLORS[properties.category ?? ""] ?? AQI_MISSING
+                        : classFill(properties.value, classes)
+                    }
+                  />
                 ) : null}
               </LayersControl.Overlay>
               <LayersControl.Overlay name="Built-up growth (Dynamic World)">
@@ -179,9 +188,12 @@ export function MapPage() {
                     })}
                     onEachFeature={(feature, layer) => {
                       const p = feature.properties;
-                      const estimateNote = p.pollution_assignment === "idw_estimate" ? "IDW estimate, not a measurement" : p.pollution_assignment;
+                      const concentration =
+                        p.mean_concentration == null
+                          ? "No CPCB monitor in this cell"
+                          : `PM2.5 ${formatNumber(p.mean_concentration)} µg/m³<br/>${(p.station_names ?? []).join(", ")}<br/>${p.observation_count} station-months<br/>${p.coverage ?? ""}<br/>${p.pollution_source ?? "CPCB"}`;
                       layer.bindPopup(
-                        `<strong>${p.grid_code}</strong><br/>obs count: ${p.observation_count}<br/>mean conc: ${p.mean_concentration ?? "—"}<br/>NDVI: ${p.mean_ndvi ?? "—"}<br/>built-up %: ${p.built_up_percentage ?? "—"}<br/>${estimateNote}`,
+                        `<strong>${p.grid_code}</strong><br/>${concentration}<br/>NDVI: ${p.mean_ndvi ?? "—"}<br/>built-up %: ${p.built_up_percentage ?? "—"}`,
                       );
                     }}
                   />
@@ -232,6 +244,7 @@ export function MapPage() {
               <p className="text-xs font-medium text-stone-700">
                 {mode === "change" ? `Change in annual AQI, ${base} to ${selectedYear}` : `Annual AQI, ${selectedYear}`}
               </p>
+              {partialYearNote(yearCity) ? <p className="text-xs text-stone-600">{partialYearNote(yearCity)}</p> : null}
               <input
                 className="w-full"
                 type="range"
@@ -249,8 +262,8 @@ export function MapPage() {
               <ClassList classes={classes} />
               <p className="mt-1 text-[11px] text-stone-600">
                 {mode === "change"
-                  ? "Pale red areas improved most (AQI fell), dark red areas got worse (AQI rose). Classes are 10 AQI points and the same for every pair of years. The solid line is no change; dashed lines are every 20 points."
-                  : "Pale red is the lowest annual AQI and dark red the highest, in 10-point classes that are the same in every year. Solid lines mark the CPCB limits at 200 (Moderate/Poor) and 300 (Poor/Very Poor)."}
+                  ? "Green is the lowest change in this comparison. Dark red is the highest. Eight filled bands, drawn the same way as Station AQI in 2026."
+                  : "Green is this year’s lowest estimated AQI. Dark red is the highest. Eight filled bands, drawn the same way as Station AQI in 2026."}
               </p>
               <dl className="mt-2 space-y-1 text-xs text-stone-700">
                 {mode === "change" && surface.data?.mode === "change" ? (
@@ -281,13 +294,13 @@ export function MapPage() {
                   </dd>
                 </div>
                 <div className="flex justify-between"><dt>Mean station AQI</dt><dd>{formatNumber(yearCity?.mean_aqi, 0)} ({yearCity?.stations} stations)</dd></div>
-                <div className="flex justify-between"><dt>Most built-up third</dt><dd>AQI {formatNumber(yearStats?.most_built_aqi, 0)}</dd></div>
-                <div className="flex justify-between"><dt>Least built-up third</dt><dd>AQI {formatNumber(yearStats?.least_built_aqi, 0)}</dd></div>
+                <div className="flex justify-between"><dt>Most built-up nearby</dt><dd>AQI {formatNumber(yearStats?.most_built_aqi, 0)}</dd></div>
+                <div className="flex justify-between"><dt>Least built-up nearby</dt><dd>AQI {formatNumber(yearStats?.least_built_aqi, 0)}</dd></div>
                 <div className="flex justify-between"><dt>Pearson r</dt><dd>{formatNumber(yearStats?.pearson_r, 2)}</dd></div>
               </dl>
               {yearStats?.gap != null ? (
                 <p className="mt-2 text-xs text-stone-600">
-                  In {selectedYear}, monitors in the most built-up third (about {formatNumber(yearStats.most_built_share, 0)}% built-up within 1 km) averaged {formatNumber(yearStats.gap, 0)} AQI points more than monitors in the least built-up third (about {formatNumber(yearStats.least_built_share, 0)}%). This is an association, not a measured effect.
+                  In {selectedYear}, monitors with the most built-up land nearby (about {formatNumber(yearStats.most_built_share, 0)}% within 1 km) averaged {formatNumber(yearStats.gap, 0)} AQI points more than monitors with the least (about {formatNumber(yearStats.least_built_share, 0)}%). This is an association, not a measured effect.
                 </p>
               ) : null}
               <p className="mt-2 text-[11px] text-stone-600">
@@ -302,7 +315,7 @@ export function MapPage() {
           ) : null}
           {builtUp.isError ? <p className="mb-3 text-xs text-stone-600">Built-up and annual AQI are not available for this city.</p> : null}
           <label className="text-xs">
-            Fill opacity (AQI surface and grid)
+            Fill opacity (AQI bands and grid)
             <input className="w-full" type="range" min={0.15} max={0.9} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} />
           </label>
           <p className="mt-3 text-xs font-medium text-stone-700">CPCB snapshot station category</p>
@@ -329,7 +342,7 @@ export function MapPage() {
             <li>Basemap: OpenStreetMap</li>
           </ul>
           <p className="mt-3 text-xs text-stone-600">
-            Annual station circles are the mean daily CPCB index computed from XKDR daily concentrations. The snapshot layer is the CPCB index for one hour. Built-up is Dynamic World class 6 inside the GAUL Delhi boundary. Grid colour is the XKDR PM2.5 mean, in µg/m³, only for a cell that contains a monitor. Cells without a monitor are left empty. Roads, parks, and industrial sites are OpenStreetMap. {industry.data?.disclaimer}
+            Annual station circles are the mean daily CPCB index computed from XKDR daily concentrations. The snapshot layer is the CPCB index for one hour. Built-up is Dynamic World class 6 inside the GAUL Delhi boundary. Grid colour is the hour-weighted CPCB PM2.5 mean from the XKDR extract{grid.data?.coverage ? ` (${grid.data.coverage})` : ""}, in µg/m³, for {formatNumber(grid.data?.cells_with_monitor, 0)} cells that contain a monitor. Cells without a monitor are empty. Roads, parks, and industrial sites are OpenStreetMap. {industry.data?.disclaimer}
           </p>
           <p className="mt-2 text-xs">CPCB index stations: {formatNumber(cpcb.data?.station_count, 0)}. Concentration stations: {formatNumber(stations.data?.features?.length, 0)}.</p>
         </Card>

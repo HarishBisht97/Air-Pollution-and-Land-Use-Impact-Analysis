@@ -8,10 +8,10 @@ import { DataKindBadge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
 import { NdviBuiltUpChart } from "@/features/dashboard/NdviBuiltUpChart";
 import { BuiltUpAqi } from "@/features/relationships/BuiltUpAqi";
-import { type BuiltUpAqiYears, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
+import { type BuiltUpAqiYears, partialYearNote, useBuiltUpAqiYears } from "@/features/relationships/builtupAqiYears";
 import { BuiltUpTrendChart, TercileGapChart, gapSummary } from "@/features/relationships/BuiltUpAqiYearsCharts";
 
-function BuiltUpAqiYearsCard({ data }: { data: BuiltUpAqiYears }) {
+export function BuiltUpAqiYearsCard({ data }: { data: BuiltUpAqiYears }) {
   const trend = data.city_trend;
   const first = trend[0];
   const last = trend[trend.length - 1];
@@ -21,9 +21,10 @@ function BuiltUpAqiYearsCard({ data }: { data: BuiltUpAqiYears }) {
       <p className="mb-3 text-sm text-stone-700">
         Built-up land inside Delhi went from {formatNumber(first.built_km2, 0)} km² in {first.year} to {formatNumber(last.built_km2, 0)} km² in {last.year}.
         {summary.allPositive
-          ? ` In every year, monitors in the most built-up third had a higher annual AQI than monitors in the least built-up third, by ${formatNumber(summary.minGap, 0)} to ${formatNumber(summary.maxGap, 0)} points (Pearson r ${formatNumber(summary.minR, 2)} to ${formatNumber(summary.maxR, 2)}).`
+          ? ` In every year, monitors with the most built-up land nearby had a higher annual AQI than monitors with the least, by ${formatNumber(summary.minGap, 0)} to ${formatNumber(summary.maxGap, 0)} points (Pearson r ${formatNumber(summary.minR, 2)} to ${formatNumber(summary.maxR, 2)}).`
           : ""}
         {` The city mean station AQI moved from ${formatNumber(first.mean_aqi, 0)} to ${formatNumber(last.mean_aqi, 0)} over the same years.`}
+        {last.partial ? ` ${partialYearNote(last)}` : ""}
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
         <div>
@@ -33,7 +34,7 @@ function BuiltUpAqiYearsCard({ data }: { data: BuiltUpAqiYears }) {
           </div>
         </div>
         <div>
-          <h3 className="mb-2 text-sm font-medium text-stone-800">Annual AQI by built-up third of monitors</h3>
+          <h3 className="mb-2 text-sm font-medium text-stone-800">Annual AQI where surroundings are most built-up, and where they are least</h3>
           <div className="h-80">
             <TercileGapChart years={data.years} />
           </div>
@@ -149,16 +150,34 @@ type ChangeFit = {
   observed_year?: number;
 };
 
+export function MeasuredConcentrationChange() {
+  const { filters } = useFilters();
+  const measured = useQuery({
+    queryKey: ["builtup-concentration-change", filters.city],
+    queryFn: () => apiGet<ConcentrationPayload>("/analysis/builtup-concentration-change", { city: filters.city }),
+  });
+  return (
+    <Card title={`Measured change, ${measured.data?.baseline_year ?? 2018}–${measured.data?.recent_year ?? 2024}`} action={<DataKindBadge kind="statistical_estimate" />}>
+      <p className="mb-3 text-sm text-stone-600">
+        Each point is one Delhi monitor. Built-up share is Dynamic World class 6 within 1 km. Concentrations are hour-weighted annual means with at least six complete months. {measured.data?.source}
+      </p>
+      {measured.isLoading ? <p className="text-sm text-stone-600">Comparing station changes…</p> : null}
+      {measured.isError ? <Alert>Could not load the measured built-up and concentration changes.</Alert> : null}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(measured.data?.pollutants ?? []).map((fit) => (
+          <ConcentrationScatter key={fit.pollutant} fit={fit} baseline={measured.data?.baseline_year ?? 2018} recent={measured.data?.recent_year ?? 2024} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function RelationshipsPage() {
   const { filters } = useFilters();
   const [showChange, setShowChange] = useState(false);
   const scatter = useQuery({
     queryKey: ["scatter-rel", filters.city],
     queryFn: () => apiGet<any>("/analysis/scatter", { city: filters.city, x: "mean_ndvi", y: "built_up_percentage" }),
-  });
-  const measured = useQuery({
-    queryKey: ["builtup-concentration-change", filters.city],
-    queryFn: () => apiGet<ConcentrationPayload>("/analysis/builtup-concentration-change", { city: filters.city }),
   });
   const model = useQuery({
     queryKey: ["builtup-aqi", filters.city],
@@ -185,18 +204,7 @@ export function RelationshipsPage() {
       {builtUpYears.isLoading ? <p className="text-sm text-stone-600">Computing annual AQI and built-up share…</p> : null}
       {builtUpYears.isError ? <Alert>Could not load built-up growth and annual AQI.</Alert> : null}
       {builtUpYears.data?.status === "ok" ? <BuiltUpAqiYearsCard data={builtUpYears.data} /> : null}
-      <Card title={`Measured change, ${measured.data?.baseline_year ?? 2018}–${measured.data?.recent_year ?? 2024}`} action={<DataKindBadge kind="statistical_estimate" />}>
-        <p className="mb-3 text-sm text-stone-600">
-          Each point is one Delhi monitor. Built-up share is Dynamic World class 6 within 1 km. Concentrations are hour-weighted annual means with at least six complete months. {measured.data?.source}
-        </p>
-        {measured.isLoading ? <p className="text-sm text-stone-600">Comparing station changes…</p> : null}
-        {measured.isError ? <Alert>Could not load the measured built-up and concentration changes.</Alert> : null}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {(measured.data?.pollutants ?? []).map((fit) => (
-            <ConcentrationScatter key={fit.pollutant} fit={fit} baseline={measured.data?.baseline_year ?? 2018} recent={measured.data?.recent_year ?? 2024} />
-          ))}
-        </div>
-      </Card>
+      <MeasuredConcentrationChange />
       <BuiltUpAqi />
       <Alert>
         These plots use grid-cell land-cover and index values. Pollution is assigned only to cells that contain a monitor. Correlation is not causation. Meteorology is not controlled.

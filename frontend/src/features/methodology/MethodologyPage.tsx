@@ -25,10 +25,10 @@ export function MethodologyPage() {
       </p>
       <h3 className="font-display text-xl">Sparse stations</h3>
       <p>
-        City-wide pollution maps and hotspot requests are disabled below eight
-        stations. Delhi seed has twelve listed stations: observed means stay on
-        the station layer, and other grid cells may show a labeled IDW estimate
-        (not a measurement).
+        The analysis grid is coloured only in cells that contain a CPCB monitor.
+        The value is the hour-weighted mean of monthly PM2.5 from the XKDR
+        extract of CPCB CAAQMS. Cells without a monitor are left empty. The
+        grid is not an interpolated surface and it is not the labeled sample series.
       </p>
       <h3 className="font-display text-xl">Remote sensing</h3>
       <p>

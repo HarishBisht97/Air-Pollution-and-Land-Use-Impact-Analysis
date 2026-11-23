@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Card } from "@/components/ui/Card";
 import { DataKindBadge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
-import { AQI_COLORS, type BuiltUpAqiYears, type StationFeature } from "@/features/relationships/builtupAqiYears";
+import { AQI_COLORS, type BuiltUpAqiYears, type StationFeature, partialYearNote } from "@/features/relationships/builtupAqiYears";
 
 const CATEGORY_ORDER = ["Good", "Satisfactory", "Moderate", "Poor", "Very Poor", "Severe"];
 const MISSING_FILL = "#e7e5e4";
@@ -184,6 +184,9 @@ export function StationChangeTable({ data, selectedYear }: { data: BuiltUpAqiYea
       <p className="mt-2 text-xs text-stone-600">
         Each cell is the annual AQI (top) and the Dynamic World built-up share within {data.radius_km} km (bottom). {data.aqi_method}
       </p>
+      {data.city_trend.filter((row) => row.partial).map((row) => (
+        <p key={row.year} className="mt-1 text-xs text-stone-600">{partialYearNote(row)}</p>
+      ))}
       <p className="mt-1 text-xs text-stone-600">{data.caveat}</p>
     </Card>
   );
